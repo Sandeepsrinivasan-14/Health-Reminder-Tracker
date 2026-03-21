@@ -1,0 +1,26 @@
+﻿version: '3.9'
+services:
+  db:
+    image: postgres:16
+    container_name: healthreminder-db
+    environment:
+      POSTGRES_DB: healthreminder
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: sandeepsrinivasan  # Your standard pw
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: ./backend
+    container_name: healthreminder-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:sandeepsrinivasan@db:5432/healthreminder
+
+volumes:
+  postgres_data:
