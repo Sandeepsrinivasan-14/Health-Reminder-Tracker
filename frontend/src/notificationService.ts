@@ -1,33 +1,20 @@
-// Notification Service for medication reminders
-export class NotificationService {
-  static requestPermission() {
-    if ('Notification' in window) {
-      Notification.requestPermission();
+﻿class NotificationService {
+  private static instance: NotificationService;
+  
+  static getInstance(): NotificationService {
+    if (!NotificationService.instance) {
+      NotificationService.instance = new NotificationService();
     }
+    return NotificationService.instance;
   }
 
-  static sendNotification(title: string, body: string, tag?: string) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, {
-        body: body,
-        icon: '/favicon.svg',
-        tag: tag || 'medication-reminder'
-      });
-    }
+  sendNotification(title: string, body: string) {
+    console.log(`Notification: ${title} - ${body}`);
   }
 
-  static scheduleReminder(medName: string, time: string) {
-    // Simple reminder scheduling
-    const now = new Date();
-    const [hour, minute] = time.split(':');
-    const reminderTime = new Date();
-    reminderTime.setHours(parseInt(hour), parseInt(minute), 0);
-    
-    const timeDiff = reminderTime.getTime() - now.getTime();
-    if (timeDiff > 0) {
-      setTimeout(() => {
-        this.sendNotification('Medication Reminder', Time to take );
-      }, timeDiff);
-    }
+  getMedicationReminders(userId: number) {
+    return fetch(`http://localhost:8000/api/notifications/medication-reminders/${userId}`);
   }
 }
+
+export default NotificationService.getInstance();
