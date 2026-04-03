@@ -1,0 +1,38 @@
+import React, { useState, useEffect } from 'react'
+
+function App() {
+  const [apiStatus, setApiStatus] = useState('checking...')
+
+  useEffect(() => {
+    fetch('http://localhost:8000/health')
+      .then(res => res.json())
+      .then(data => setApiStatus(data.status))
+      .catch(() => setApiStatus('offline'))
+  }, [])
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <div className="bg-blue-600 text-white p-4 shadow-lg">
+        <div className="container mx-auto">
+          <h1 className="text-2xl font-bold">?? HealthReminderTracker</h1>
+          <p className="text-sm mt-1">
+            API Status: <span className={apiStatus === 'healthy' ? 'text-green-200' : 'text-red-200'}>
+              {apiStatus}
+            </span>
+          </p>
+        </div>
+      </div>
+      <div className="container mx-auto p-4">
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <h2 className="text-xl font-bold mb-4">? App is running!</h2>
+          <p>Backend API Status: {apiStatus}</p>
+          <p className="mt-4 text-sm text-gray-600">
+            To add full features, replace src/App.tsx with your complete application code.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default App

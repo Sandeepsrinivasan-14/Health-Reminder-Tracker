@@ -1,0 +1,165 @@
+﻿// NOTIFICATION INTEGRATION GUIDE
+// ============================================
+
+// STEP 1: Add this to your main App.tsx or Dashboard component
+
+import React, { useState, useEffect } from 'react';
+import NotificationService from './services/NotificationService';
+import NotificationBell from './components/NotificationBell';
+import checkHealthMetricsAndAlert from './utils/HealthMetricsAlert';
+
+// Add this inside your main component
+export default function YourMainComponent() {
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  // Initialize notifications on app load
+  useEffect(() => {
+    const initNotifications = async () => {
+      const granted = await NotificationService.requestPermission();
+      setNotificationsEnabled(granted);
+      if (granted) {
+        console.log('✅ Notifications enabled for this browser');
+      }
+    };
+    initNotifications();
+  }, []);
+
+  // Start reminder checks when user is selected
+  useEffect(() => {
+    if (selectedUser && notificationsEnabled) {
+      NotificationService.startReminderCheck(selectedUser.id);
+      console.log('✅ Started reminder checks for user:', selectedUser.name);
+    } else if (!selectedUser) {
+      NotificationService.stopReminderCheck();
+    }
+    
+    return () => {
+      if (selectedUser) {
+        NotificationService.stopReminderCheck();
+      }
+    };
+  }, [selectedUser, notificationsEnabled]);
+
+  // Modified saveHealthData function to include alerts
+  const saveHealthDataWithAlerts = async (healthData) => {
+    try {
+      // Save health data to backend (your existing code)
+      const response = await fetch('http://localhost:8000/api/health-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(healthData)
+      });
+      
+      if (response.ok && selectedUser) {
+        // Check for health alerts
+        const alerts = await checkHealthMetricsAndAlert(selectedUser.id, healthData);
+        if (alerts.length > 0) {
+          console.log(⚠️  health alerts triggered:, alerts);
+          // Show in-app notification
+          alert(Health Alerts:\n);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save health data:', error);
+    }
+  };
+
+  // Add the notification bell to your header/UI
+  return (
+    <div>
+      <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow">
+        <h1 className="text-xl font-bold">Medical Health Reminder Tracker</h1>
+        <div className="flex items-center space-x-4">
+          {selectedUser && <NotificationBell userId={selectedUser.id} />}
+          {/* Your other header content */}
+        </div>
+      </header>
+      
+      {/* Rest of your app content */}
+    </div>
+  );
+}
+
+// STEP 2: Add this to your health data save function
+// Find where you save health data and replace/add this:
+
+const handleSaveHealthData = async () => {
+  const healthData = {
+    bp_systolic: parseInt(bpSystolic),
+    bp_diastolic: parseInt(bpDiastolic),
+    heart_rate: parseInt(heartRate),
+    blood_sugar: parseInt(bloodSugar),
+    weight: parseInt(weight),
+    user_id: selectedUser.id,
+    timestamp: new Date().toISOString()
+  };
+  
+  // Check for health alerts BEFORE saving
+  if (selectedUser) {
+    const alerts = await checkHealthMetricsAndAlert(selectedUser.id, healthData);
+    if (alerts.length > 0) {
+      // Show alerts to user
+      console.log('Health alerts:', alerts);
+    }
+  }
+  
+  // Then save to backend (your existing code)
+  // ...
+};
+
+// STEP 3: Add this to your medication save function for stock tracking
+
+const handleAddMedication = async () => {
+  const medicationData = {
+    user_id: selectedUser.id,
+    name: medicationName,
+    dosage: medicationDosage,
+    time_of_day: medicationTime,
+    active: true
+  };
+  
+  // Save medication
+  const response = await fetch('http://localhost:8000/medications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(medicationData)
+  });
+  
+  const result = await response.json();
+  
+  // Initialize stock for this medication (default 30 doses)
+  if (result.id) {
+    await NotificationService.updateMedicationStock(result.id, 30);
+    console.log('✅ Medication stock initialized with 30 doses');
+  }
+};
+
+// STEP 4: Add stock decrement when medication is taken
+
+const handleMarkMedicationTaken = async (medicationId, medicationName) => {
+  // Log medication as taken
+  await fetch(http://localhost:8000/medications//log?status=taken, {
+    method: 'POST'
+  });
+  
+  // Decrease stock
+  const currentStock = medicationStock[medicationId] || 30;
+  const newStock = currentStock - 1;
+  await NotificationService.updateMedicationStock(medicationId, newStock);
+  
+  // Check for low stock alert
+  if (newStock <= 5) {
+    const alertMessage = ⚠️ Low Stock Alert:  has only  doses remaining!;
+    await NotificationService.createHealthAlert(
+      selectedUser.id, 
+      'Low Stock', 
+      'warning', 
+      alertMessage
+    );
+    console.log(alertMessage);
+  }
+  
+  // Update local state
+  setMedicationStock({...medicationStock, [medicationId]: newStock});
+};

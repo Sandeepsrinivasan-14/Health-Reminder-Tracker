@@ -1,0 +1,40 @@
+// Add to App.tsx imports
+import { useState } from 'react'
+
+// Add this state in App component
+const [caregiverName, setCaregiverName] = useState('')
+const [caregiverPhone, setCaregiverPhone] = useState('')
+const [caregiverEmail, setCaregiverEmail] = useState('')
+
+// Add this function
+const registerCaregiver = async () => {
+  if (!selectedUser) {
+    alert('Please select a user first')
+    return
+  }
+  try {
+    await axios.post(`http://localhost:8000/caregiver/register/${selectedUser.id}`, null, {
+      params: {
+        name: caregiverName,
+        phone: caregiverPhone,
+        email: caregiverEmail
+      }
+    })
+    alert('Caregiver registered successfully!')
+  } catch (error) {
+    alert('Failed to register caregiver')
+  }
+}
+
+const triggerSOS = async () => {
+  if (!selectedUser) {
+    alert('Please select a user first')
+    return
+  }
+  try {
+    const res = await axios.post(`http://localhost:8000/sos/${selectedUser.id}`)
+    alert(`SOS Alert sent! Status: ${JSON.stringify(res.data.delivery_status)}`)
+  } catch (error) {
+    alert('Failed to send SOS')
+  }
+}

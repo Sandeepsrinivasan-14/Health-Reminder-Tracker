@@ -1,50 +1,45 @@
-﻿# Dependencies
-node_modules/
-frontend/node_modules/
+﻿# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
+venv/
+env/
+ENV/
+.venv
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
-health_tracker.db
 
 # Environment
 .env
 .env.local
-.env.production
-.env.development
-
-# Build outputs
-dist/
-build/
-*.log
-*.tmp
+.env.*.local
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-.DS_Store
-Thumbs.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.vercel
+
+# Logs
+*.log
+logs/
 
 # OS
 .DS_Store
 Thumbs.db
-ehthumbs.db
-*.swp
 
-# Testing
-coverage/
-.nyc_output/
-.pytest_cache/
-
-# Package managers
-package-lock.json
-yarn.lock
+# Secrets
+*_key*
+*_secret*
+*.pem

@@ -1,0 +1,300 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Test Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .alert {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .danger { background: #fed7d7; color: #c53030; border-left: 4px solid #c53030; }
+        .warning { background: #feebc8; color: #c05621; border-left: 4px solid #c05621; }
+        .info { background: #c6f6d5; color: #276749; border-left: 4px solid #276749; }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-online { background: #c6f6d5; color: #276749; }
+        .status-offline { background: #fed7d7; color: #c53030; }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔔 Medical Health Reminder Tracker</h1>
+        <p>Notification System Test Dashboard</p>
+        <div id="backendStatus">Checking backend status...</div>
+    </div>
+
+    <div class="card">
+        <h3>💊 Medication Reminders</h3>
+        <div id="medicationReminders">Loading...</div>
+        <button onclick="checkMedicationReminders()">Refresh</button>
+    </div>
+
+    <div class="card">
+        <h3>💉 Vaccination Reminders</h3>
+        <div id="vaccinationReminders">Loading...</div>
+        <button onclick="checkVaccinationReminders()">Refresh</button>
+    </div>
+
+    <div class="card">
+        <h3>⚠️ Active Health Alerts</h3>
+        <div id="healthAlerts">Loading...</div>
+        <button onclick="loadAlerts()">Refresh</button>
+        <button onclick="createTestAlert()">Create Test Alert</button>
+    </div>
+
+    <div class="card">
+        <h3>⚙️ Notification Settings</h3>
+        <div id="notificationSettings">Loading...</div>
+        <button onclick="requestNotificationPermission()">Request Notification Permission</button>
+        <button onclick="sendTestNotification()">Send Test Notification</button>
+    </div>
+
+    <div class="card">
+        <h3>📊 System Status</h3>
+        <div id="systemStatus">Loading...</div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        async function checkBackendStatus() {
+            try {
+                const response = await fetch(${API_URL}/health);
+                const data = await response.json();
+                document.getElementById('backendStatus').innerHTML = 
+                    <span class="status-badge status-online">✅ ONLINE</span>
+                    Status:  | Phase: 
+                ;
+                return true;
+            } catch (error) {
+                document.getElementById('backendStatus').innerHTML = 
+                    <span class="status-badge status-offline">❌ OFFLINE</span>
+                    Backend not responding. Make sure it's running.
+                ;
+                return false;
+            }
+        }
+
+        async function checkMedicationReminders() {
+            try {
+                const response = await fetch(${API_URL}/api/notifications/medication-reminders/1);
+                const data = await response.json();
+                let html = <p><strong>Time of day:</strong> </p>;
+                html += <p><strong>Medications due:</strong> </p>;
+                if (data.medications.length > 0) {
+                    html += '<ul>';
+                    data.medications.forEach(med => {
+                        html += <li>💊  -  (Stock:  doses)</li>;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += '<p>No medications due at this time</p>';
+                }
+                document.getElementById('medicationReminders').innerHTML = html;
+            } catch (error) {
+                document.getElementById('medicationReminders').innerHTML = <p style="color:red">Error: </p>;
+            }
+        }
+
+        async function checkVaccinationReminders() {
+            try {
+                const response = await fetch(${API_URL}/api/notifications/vaccination-due/1);
+                const data = await response.json();
+                let html = <p><strong>Vaccinations due:</strong> </p>;
+                if (data.vaccinations.length > 0) {
+                    html += '<ul>';
+                    data.vaccinations.forEach(vax => {
+                        html += <li>💉  - Due: </li>;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += '<p>No vaccinations due in next 7 days</p>';
+                }
+                document.getElementById('vaccinationReminders').innerHTML = html;
+            } catch (error) {
+                document.getElementById('vaccinationReminders').innerHTML = <p style="color:red">Error: </p>;
+            }
+        }
+
+        async function loadAlerts() {
+            try {
+                const response = await fetch(${API_URL}/api/notifications/alerts/1);
+                const alerts = await response.json();
+                let html = <p><strong>Total alerts:</strong> </p>;
+                if (alerts.length > 0) {
+                    alerts.forEach(alert => {
+                        let levelClass = alert.level === 'danger' ? 'danger' : (alert.level === 'warning' ? 'warning' : 'info');
+                        html += 
+                            <div class="alert ">
+                                <strong></strong><br>
+                                <br>
+                                <small>Created: </small><br>
+                                <small>Acknowledged: </small>
+                            </div>
+                        ;
+                    });
+                } else {
+                    html += '<p>No active alerts</p>';
+                }
+                document.getElementById('healthAlerts').innerHTML = html;
+            } catch (error) {
+                document.getElementById('healthAlerts').innerHTML = <p style="color:red">Error: </p>;
+            }
+        }
+
+        async function createTestAlert() {
+            const alert = {
+                user_id: 1,
+                alert_type: 'Test Alert',
+                alert_level: 'info',
+                message: Test alert created at 
+            };
+            try {
+                const response = await fetch(${API_URL}/api/notifications/health-alert, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(alert)
+                });
+                const data = await response.json();
+                alert(Test alert created with ID: );
+                loadAlerts();
+            } catch (error) {
+                alert(Error: );
+            }
+        }
+
+        async function loadNotificationSettings() {
+            try {
+                const response = await fetch(${API_URL}/api/notifications/settings/1);
+                const settings = await response.json();
+                let html = 
+                    <p>🔔 Browser Notifications: </p>
+                    <p>📧 Email Notifications: </p>
+                    <p>📱 SMS Notifications: </p>
+                    <p>⏰ Reminder Frequency: </p>
+                ;
+                document.getElementById('notificationSettings').innerHTML = html;
+            } catch (error) {
+                document.getElementById('notificationSettings').innerHTML = <p style="color:red">Error: </p>;
+            }
+        }
+
+        async function requestNotificationPermission() {
+            if ('Notification' in window) {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    alert('Notification permission granted!');
+                } else {
+                    alert('Notification permission denied');
+                }
+            } else {
+                alert('Browser does not support notifications');
+            }
+        }
+
+        function sendTestNotification() {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('🔔 Test Notification', {
+                    body: 'This is a test notification from your Medical Health Tracker!',
+                    icon: '/favicon.svg'
+                });
+                alert('Test notification sent!');
+            } else {
+                alert('Please grant notification permission first');
+                requestNotificationPermission();
+            }
+        }
+
+        async function loadSystemStatus() {
+            let html = '<ul>';
+            try {
+                const usersResponse = await fetch(${API_URL}/users);
+                const users = await usersResponse.json();
+                html += <li>👥 Users: </li>;
+            } catch (e) { html += <li>👥 Users: Error</li>; }
+            
+            try {
+                const alertsResponse = await fetch(${API_URL}/api/notifications/alerts/1);
+                const alerts = await alertsResponse.json();
+                html += <li>⚠️ Active Alerts: </li>;
+            } catch (e) { html += <li>⚠️ Active Alerts: Error</li>; }
+            
+            html += '</ul>';
+            document.getElementById('systemStatus').innerHTML = html;
+        }
+
+        // Initialize dashboard
+        async function init() {
+            await checkBackendStatus();
+            await checkMedicationReminders();
+            await checkVaccinationReminders();
+            await loadAlerts();
+            await loadNotificationSettings();
+            await loadSystemStatus();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                checkMedicationReminders();
+                checkVaccinationReminders();
+                loadAlerts();
+                loadSystemStatus();
+            }, 30000);
+        }
+
+        init();
+    </script>
+</body>
+</html>

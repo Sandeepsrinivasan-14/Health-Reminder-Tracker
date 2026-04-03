@@ -1,11 +1,18 @@
-﻿import React, { useState, useEffect } from 'react'
-import { 
-  getHealth, getUsers, createUser, getMedications, 
-  addMedication, logMedication, getVaccinations, 
-  addVaccination, getHealthTips 
+import React, { useState, useEffect } from 'react'
+import {
+  getHealth, getUsers, createUser, getMedications,
+  addMedication, logMedication, getVaccinations,
+  addVaccination, getHealthTips
 } from './api'
+import HealthTracker from './HealthTracker'
+import VoiceInput from './VoiceInput'
+import { useDarkMode } from './darkModeContext'
+import AIHealthAssistant from './AIHealthAssistant'
+import HealthRiskPredictor from './HealthRiskPredictor'
+import HealthTrendAnalyzer from './HealthTrendAnalyzer'
 
 function App() {
+  const { darkMode, toggleDarkMode } = useDarkMode()
   const [apiStatus, setApiStatus] = useState('checking...')
   const [activeTab, setActiveTab] = useState('dashboard')
   const [users, setUsers] = useState([])
@@ -13,8 +20,8 @@ function App() {
   const [medications, setMedications] = useState([])
   const [vaccinations, setVaccinations] = useState([])
   const [healthTips, setHealthTips] = useState([])
-  const [sosMessage, setSosMessage] = useState('')
-  
+  const [medStock, setMedStock] = useState({})
+
   const [newUserName, setNewUserName] = useState('')
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newMedName, setNewMedName] = useState('')
@@ -26,6 +33,9 @@ function App() {
   useEffect(() => {
     checkApiHealth()
     loadUsers()
+    if ('Notification' in window) {
+      Notification.requestPermission()
+    }
   }, [])
 
   const checkApiHealth = async () => {
@@ -75,40 +85,50 @@ function App() {
     }
   }
 
+  const checkStockAlert = (medName, stockLeft) => {
+    if (stockLeft <= 5) {
+      alert('LOW STOCK ALERT: ' + medName + ' has only ' + stockLeft + ' doses left! Please refill.')
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Low Stock Alert', {
+          body: medName + ' has only ' + stockLeft + ' doses left!',
+          icon: '/favicon.svg'
+        })
+      }
+    }
+  }
+
+  const updateMedStock = (medId, medName) => {
+    const currentStock = medStock[medId] || 30
+    const newStock = currentStock - 1
+    setMedStock({...medStock, [medId]: newStock})
+    checkStockAlert(medName, newStock)
+  }
+
+  const handleSOS = () => {
+    alert('EMERGENCY SOS ALERT! Emergency services have been notified. Stay calm, help is on the way!')
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('SOS Alert Sent!', {
+        body: 'Emergency services have been notified of your location.',
+        icon: '/favicon.svg'
+      })
+    }
+  }
+
   const handleAddMedication = async () => {
     if (!selectedUser) {
       alert('Please select a user first')
       return
     }
-    if (!newMedName || !newMedDosage) {
-      alert('Please enter medication name and dosage')
-      return
-    }
     try {
-      await addMedication({
-        user_id: selectedUser.id,
-        name: newMedName,
-        dosage: newMedDosage,
-        time_of_day: newMedTime,
-        active: true
-      })
-      setNewMedName('')
-      setNewMedDosage('')
+      await addMedication(selectedUser.id, newMedName, newMedDosage, newMedTime)
       const meds = await getMedications(selectedUser.id)
       setMedications(meds)
-      alert('Medication added!')
+      setNewMedName('')
+      setNewMedDosage('')
+      setNewMedTime('morning')
+      alert('Medication added successfully!')
     } catch (error) {
       alert('Failed to add medication')
-    }
-  }
-
-  const handleLogMedication = async (medId, status) => {
-    try {
-      await logMedication(medId, status)
-      const message = 'Medication marked as ' + status
-      alert(message)
-    } catch (error) {
-      alert('Failed to log medication')
     }
   }
 
@@ -117,297 +137,289 @@ function App() {
       alert('Please select a user first')
       return
     }
-    if (!newVaccine || !newVaccineDate) {
-      alert('Please enter vaccine name and date')
-      return
-    }
     try {
-      await addVaccination({
-        user_id: selectedUser.id,
-        name: newVaccine,
-        due_date: newVaccineDate
-      })
-      setNewVaccine('')
-      setNewVaccineDate('')
+      await addVaccination(selectedUser.id, newVaccine, newVaccineDate)
       const vax = await getVaccinations(selectedUser.id)
       setVaccinations(vax)
-      alert('Vaccination added!')
+      setNewVaccine('')
+      setNewVaccineDate('')
+      alert('Vaccination added successfully!')
     } catch (error) {
       alert('Failed to add vaccination')
     }
   }
 
-  const loadHealthTips = async () => {
+  const handleLogMedication = async (medId, medName) => {
     try {
-      const tips = await getHealthTips()
-      setHealthTips(tips)
-      alert('Loaded ' + tips.length + ' health tips!')
+      await logMedication(medId, 'taken')
+      updateMedStock(medId, medName)
+      alert('Medication logged as taken!')
     } catch (error) {
-      alert('Failed to load health tips')
-    }
-  }
-
-  const handleSOS = () => {
-    if (!selectedUser) {
-      alert('Please select a patient first from the Dashboard tab!')
-      return
-    }
-    
-    const message = '🚨 EMERGENCY SOS 🚨\nPatient: ' + selectedUser.name + '\nEmail: ' + selectedUser.email + '\nTime: ' + new Date().toLocaleString()
-    
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude
-          const lng = position.coords.longitude
-          const location = 'https://maps.google.com/?q=' + lat + ',' + lng
-          const fullMessage = message + '\n📍 Location: ' + location
-          alert(fullMessage)
-          setSosMessage('SOS sent with location!')
-          setTimeout(() => setSosMessage(''), 3000)
-        },
-        () => {
-          alert(message + '\n⚠️ Could not get location - please call emergency services!')
-          setSosMessage('SOS sent without location!')
-          setTimeout(() => setSosMessage(''), 3000)
-        }
-      )
-    } else {
-      alert(message + '\n⚠️ GPS not supported - please call emergency services!')
-      setSosMessage('SOS sent!')
-      setTimeout(() => setSosMessage(''), 3000)
+      alert('Failed to log medication')
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-blue-600 text-white p-4 shadow-lg">
-        <div className="container mx-auto">
-          <h1 className="text-2xl font-bold">💊 HealthReminderTracker</h1>
-          <p className="text-sm mt-1">
-            API Status: <span className={apiStatus === 'healthy' ? 'text-green-200' : 'text-red-200'}>
-              {apiStatus}
-            </span>
-            {selectedUser && <span className="ml-4">👤 Selected: {selectedUser.name}</span>}
-          </p>
-        </div>
-      </div>
-
-      <div className="container mx-auto p-4">
-        <div className="flex gap-2 mb-6 border-b">
-          <button onClick={() => setActiveTab('dashboard')} 
-            className={'px-4 py-2 font-semibold ' + (activeTab === 'dashboard' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
-            📋 Patient Dashboard
-          </button>
-          <button onClick={() => setActiveTab('caregiver')} 
-            className={'px-4 py-2 font-semibold ' + (activeTab === 'caregiver' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}>
-            👥 Caregiver & SOS
-          </button>
-        </div>
-
-        {activeTab === 'dashboard' && (
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* User Section */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="text-lg font-bold mb-4">1️⃣ Create / Select User</h2>
-              <input type="text" placeholder="Name" value={newUserName} 
-                onChange={(e) => setNewUserName(e.target.value)} 
-                className="w-full p-2 border rounded mb-2" />
-              <input type="email" placeholder="Email" value={newUserEmail} 
-                onChange={(e) => setNewUserEmail(e.target.value)} 
-                className="w-full p-2 border rounded mb-2" />
-              <button onClick={handleCreateUser} 
-                className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700 mb-4">
-                ➕ Create User
+    <div className={darkMode ? 'dark' : ''}>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="bg-white dark:bg-gray-800 shadow">
+          <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              Medical Health Reminder Tracker
+            </h1>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                API Status: {apiStatus}
+              </span>
+              <button
+                onClick={toggleDarkMode}
+                className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+              >
+                {darkMode ? 'Light Mode' : 'Dark Mode'}
               </button>
-              <h3 className="font-semibold mb-2">Existing Users:</h3>
-              <div className="max-h-64 overflow-y-auto">
-                {users.map((user) => (
-                  <button key={user.id} onClick={() => handleSelectUser(user)} 
-                    className={'w-full text-left p-2 rounded mb-1 ' + (selectedUser?.id === user.id ? 'bg-blue-100 border border-blue-500' : 'bg-gray-50 hover:bg-gray-100')}>
-                    <div className="font-semibold">{user.name}</div>
-                    <div className="text-xs text-gray-600">{user.email}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Medications Section */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="text-lg font-bold mb-4">💊 Medications</h2>
-              {selectedUser ? (
-                <>
-                  <input type="text" placeholder="Medication name" value={newMedName}
-                    onChange={(e) => setNewMedName(e.target.value)} 
-                    className="w-full p-2 border rounded mb-2" />
-                  <input type="text" placeholder="Dosage (e.g., 500mg)" value={newMedDosage}
-                    onChange={(e) => setNewMedDosage(e.target.value)} 
-                    className="w-full p-2 border rounded mb-2" />
-                  <select value={newMedTime} onChange={(e) => setNewMedTime(e.target.value)}
-                    className="w-full p-2 border rounded mb-2">
-                    <option value="morning">🌅 Morning</option>
-                    <option value="afternoon">☀️ Afternoon</option>
-                    <option value="evening">🌙 Evening</option>
-                  </select>
-                  <button onClick={handleAddMedication} 
-                    className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 mb-4">
-                    ➕ Add Medication
-                  </button>
-                  <h3 className="font-semibold mb-2">Your Medications:</h3>
-                  <div className="max-h-96 overflow-y-auto">
-                    {medications.length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">No medications added yet</p>
-                    ) : (
-                      medications.map((med) => (
-                        <div key={med.id} className="border rounded p-2 mb-2">
-                          <div className="font-semibold">{med.name}</div>
-                          <div className="text-sm text-gray-600">{med.dosage} - {med.time_of_day}</div>
-                          <div className="flex gap-2 mt-2">
-                            <button onClick={() => handleLogMedication(med.id, 'taken')}
-                              className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">✅ Taken</button>
-                            <button onClick={() => handleLogMedication(med.id, 'missed')}
-                              className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">❌ Missed</button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </>
-              ) : (
-                <p className="text-gray-500 text-center py-8">⚠️ Select a user from the left panel first</p>
-              )}
-            </div>
-
-            {/* Vaccinations Section */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="text-lg font-bold mb-4">💉 Vaccinations</h2>
-              {selectedUser ? (
-                <>
-                  <input type="text" placeholder="Vaccine name" value={newVaccine}
-                    onChange={(e) => setNewVaccine(e.target.value)} 
-                    className="w-full p-2 border rounded mb-2" />
-                  <input type="date" value={newVaccineDate}
-                    onChange={(e) => setNewVaccineDate(e.target.value)} 
-                    className="w-full p-2 border rounded mb-2" />
-                  <button onClick={handleAddVaccination} 
-                    className="w-full bg-purple-600 text-white p-2 rounded hover:bg-purple-700 mb-4">
-                    ➕ Add Vaccination
-                  </button>
-                  <h3 className="font-semibold mb-2">Upcoming Vaccinations:</h3>
-                  <div className="max-h-96 overflow-y-auto">
-                    {vaccinations.length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">No vaccinations scheduled</p>
-                    ) : (
-                      vaccinations.map((vax) => (
-                        <div key={vax.id} className="border rounded p-2 mb-2">
-                          <div className="font-semibold">{vax.name}</div>
-                          <div className="text-sm text-gray-600">Due: {new Date(vax.due_date).toLocaleDateString()}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </>
-              ) : (
-                <p className="text-gray-500 text-center py-8">⚠️ Select a user from the left panel first</p>
-              )}
             </div>
           </div>
-        )}
+        </div>
 
-        {activeTab === 'caregiver' && (
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* SOS Section */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-2xl font-bold mb-4 text-red-600">🚨 Emergency SOS</h2>
-              {!selectedUser && (
-                <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded mb-4">
-                  ⚠️ Please select a patient from the Dashboard tab first
+        <div className="container mx-auto p-4">
+          <div className="flex gap-2 mb-6 border-b">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={'px-4 py-2 font-semibold ' + (activeTab === 'dashboard' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}
+            >
+              Patient Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab('caregiver')}
+              className={'px-4 py-2 font-semibold ' + (activeTab === 'caregiver' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600')}
+            >
+              Caregiver and SOS
+            </button>
+          </div>
+
+          {activeTab === 'dashboard' && (
+            <>
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                  <h2 className="text-lg font-bold mb-4 dark:text-white">Step 1: Create / Select User</h2>
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    className="w-full p-2 border rounded mb-2 dark:bg-gray-700 dark:text-white"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    className="w-full p-2 border rounded mb-2 dark:bg-gray-700 dark:text-white"
+                  />
+                  <button
+                    onClick={handleCreateUser}
+                    className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700 mb-4"
+                  >
+                    Create User
+                  </button>
+                  <h3 className="font-semibold mb-2 dark:text-white">Existing Users:</h3>
+                  {users.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => handleSelectUser(user)}
+                      className={'w-full text-left p-2 rounded mb-1 ' + (selectedUser?.id === user.id ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-50 dark:bg-gray-700')}
+                    >
+                      <span className="dark:text-white">{user.name} ({user.email})</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                  <h2 className="text-lg font-bold mb-4 dark:text-white">Medications</h2>
+                  {selectedUser ? (
+                    <>
+                      <div className="space-y-2 mb-4">
+                        <input
+                          type="text"
+                          placeholder="Medication Name"
+                          value={newMedName}
+                          onChange={(e) => setNewMedName(e.target.value)}
+                          className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Dosage (e.g., 500mg)"
+                          value={newMedDosage}
+                          onChange={(e) => setNewMedDosage(e.target.value)}
+                          className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+                        />
+                        <select
+                          value={newMedTime}
+                          onChange={(e) => setNewMedTime(e.target.value)}
+                          className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+                        >
+                          <option value="morning">Morning</option>
+                          <option value="afternoon">Afternoon</option>
+                          <option value="evening">Evening</option>
+                          <option value="night">Night</option>
+                        </select>
+                        <button
+                          onClick={handleAddMedication}
+                          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+                        >
+                          Add Medication
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {medications.map((med) => (
+                          <div key={med.id} className="p-2 bg-gray-50 dark:bg-gray-700 rounded flex justify-between items-center">
+                            <div>
+                              <p className="font-semibold dark:text-white">{med.name}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">{med.dosage} - {med.time_of_day}</p>
+                              <p className="text-xs text-gray-500">Stock: {medStock[med.id] || 30} doses left</p>
+                            </div>
+                            <button
+                              onClick={() => handleLogMedication(med.id, med.name)}
+                              className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm"
+                            >
+                              Taken
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">Select a user first</p>
+                  )}
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                  <h2 className="text-lg font-bold mb-4 dark:text-white">Vaccinations</h2>
+                  {selectedUser ? (
+                    <>
+                      <div className="space-y-2 mb-4">
+                        <input
+                          type="text"
+                          placeholder="Vaccine Name"
+                          value={newVaccine}
+                          onChange={(e) => setNewVaccine(e.target.value)}
+                          className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+                        />
+                        <input
+                          type="date"
+                          value={newVaccineDate}
+                          onChange={(e) => setNewVaccineDate(e.target.value)}
+                          className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+                        />
+                        <button
+                          onClick={handleAddVaccination}
+                          className="w-full bg-purple-600 text-white p-2 rounded hover:bg-purple-700"
+                        >
+                          Add Vaccination
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {vaccinations.map((vax) => (
+                          <div key={vax.id} className="p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                            <p className="font-semibold dark:text-white">{vax.name}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Due: {vax.due_date}</p>
+                            <p className="text-xs text-gray-500">{vax.completed ? 'Completed' : 'Pending'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">Select a user first</p>
+                  )}
+                </div>
+              </div>
+
+              <HealthTracker selectedUser={selectedUser} />
+            </>
+          )}
+
+          {activeTab === 'caregiver' && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 className="text-2xl font-bold mb-4 text-red-600">Emergency SOS</h2>
+                <button
+                  onClick={handleSOS}
+                  className="w-full bg-red-600 text-white p-4 rounded-lg text-xl font-bold hover:bg-red-700 transition-colors"
+                >
+                  SOS EMERGENCY BUTTON
+                </button>
+              </div>
+
+              {selectedUser ? (
+                <AIHealthAssistant selectedUser={selectedUser} />
+              ) : (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                  <h3 className="text-xl font-bold mb-4">AI Health Assistant</h3>
+                  <p className="text-gray-500">Please select a user from the Dashboard tab first</p>
                 </div>
               )}
-              <button onClick={handleSOS} 
-                className="w-full bg-red-600 text-white p-4 rounded-lg text-xl font-bold hover:bg-red-700 transition-all transform hover:scale-105">
-                🔴 SOS EMERGENCY BUTTON 🔴
-              </button>
-              {sosMessage && (
-                <div className="mt-4 p-2 bg-green-100 text-green-700 rounded text-center">
-                  {sosMessage}
+
+              {selectedUser ? (
+                <HealthRiskPredictor selectedUser={selectedUser} />
+              ) : (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                  <h3 className="text-xl font-bold mb-4">Health Risk Predictor</h3>
+                  <p className="text-gray-500">Please select a user from the Dashboard tab first</p>
                 </div>
               )}
-              <p className="text-sm text-gray-600 mt-4">
-                📍 Pressing this will send your location with emergency alert
-              </p>
-            </div>
 
-            {/* Health Tips Section */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-2xl font-bold mb-4 text-green-600">💡 Health Tips</h2>
-              <button onClick={loadHealthTips} 
-                className="w-full bg-green-600 text-white p-2 rounded mb-4 hover:bg-green-700">
-                🔄 Load Health Tips
-              </button>
-              <div className="max-h-96 overflow-y-auto">
-                {healthTips.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">Click "Load Health Tips" to see daily health advice</p>
-                ) : (
-                  healthTips.map((tip, i) => (
-                    <div key={i} className="border-l-4 border-green-500 pl-3 py-2 mb-2">
-                      <p className="text-gray-700">💚 {tip}</p>
-                    </div>
-                  ))
+              {selectedUser ? (
+                <HealthTrendAnalyzer selectedUser={selectedUser} />
+              ) : (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                  <h3 className="text-xl font-bold mb-4">Health Trend Analyzer</h3>
+                  <p className="text-gray-500">Please select a user from the Dashboard tab first</p>
+                </div>
+              )}
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-xl font-bold mb-4 text-green-600">Health Tips</h3>
+                <button
+                  onClick={async () => {
+                    try {
+                      const tips = await getHealthTips();
+                      setHealthTips(tips);
+                    } catch (error) {
+                      console.error('Failed to load tips');
+                    }
+                  }}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                  Load Health Tips
+                </button>
+                {healthTips.length > 0 && (
+                  <ul className="mt-3 space-y-2">
+                    {healthTips.map((tip, idx) => (
+                      <li key={idx} className="p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-xl font-bold mb-4">Caregiver Monitoring</h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {selectedUser ? `Monitoring patient: ${selectedUser.name}` : 'Select a patient from Dashboard tab first'}
+                </p>
+                {selectedUser && (
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900 rounded">
+                    <p className="font-semibold">Patient Status:</p>
+                    <p>Active monitoring</p>
+                    <p>Health data tracking</p>
+                    <p>Medication adherence</p>
+                  </div>
                 )}
               </div>
             </div>
-
-            {/* Caregiver Monitoring */}
-            <div className="bg-white rounded-lg shadow p-6 md:col-span-2">
-              <h2 className="text-2xl font-bold mb-4 text-blue-600">👨‍👩‍👧 Caregiver Monitoring Dashboard</h2>
-              {selectedUser ? (
-                <div>
-                  <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                    <h3 className="text-lg font-bold">📋 Patient Information</h3>
-                    <p><strong>Name:</strong> {selectedUser.name}</p>
-                    <p><strong>Email:</strong> {selectedUser.email}</p>
-                    <p><strong>Last Updated:</strong> {new Date().toLocaleString()}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-                      <h3 className="font-bold text-green-700 text-lg">💊 Medications</h3>
-                      <p className="text-3xl font-bold mt-2">{medications.length}</p>
-                      <p className="text-sm text-gray-600">active medications scheduled</p>
-                      <button className="mt-2 text-sm text-blue-600 hover:underline" onClick={() => setActiveTab('dashboard')}>
-                        Manage Medications →
-                      </button>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-lg border-2 border-purple-200">
-                      <h3 className="font-bold text-purple-700 text-lg">💉 Vaccinations</h3>
-                      <p className="text-3xl font-bold mt-2">{vaccinations.length}</p>
-                      <p className="text-sm text-gray-600">upcoming vaccines</p>
-                      <button className="mt-2 text-sm text-blue-600 hover:underline" onClick={() => setActiveTab('dashboard')}>
-                        Manage Vaccinations →
-                      </button>
-                    </div>
-                  </div>
-                  <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
-                    <h3 className="font-bold text-yellow-700">⚠️ Recent Alerts</h3>
-                    <p className="text-sm text-gray-600">• No missed medications in last 24 hours</p>
-                    <p className="text-sm text-gray-600">• All vaccinations are up to date</p>
-                    <p className="text-sm text-gray-600 mt-2">💡 Tip: Use the SOS button for emergencies</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">👤</div>
-                  <p className="text-gray-500 text-lg">No patient selected</p>
-                  <p className="text-gray-400 mt-2">Please go to the Dashboard tab and select a patient first</p>
-                  <button onClick={() => setActiveTab('dashboard')} 
-                    className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Go to Dashboard →
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

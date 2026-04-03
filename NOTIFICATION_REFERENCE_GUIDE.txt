@@ -1,0 +1,213 @@
+﻿╔══════════════════════════════════════════════════════════════════════════════╗
+║     MEDICAL HEALTH REMINDER TRACKER - NOTIFICATION SYSTEM REFERENCE         ║
+║                          COMPLETE BACKEND STATUS: ✅ ACTIVE                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📊 CURRENT SYSTEM STATUS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Backend Server: Running on http://localhost:8000
+✅ Database: Active with 10 tables
+✅ AI Service: Gemini AI Active
+✅ Notification System: Fully Operational
+✅ Test User: Created (ID: 1)
+✅ Test Medication: Added (Due: evening)
+✅ Test Vaccination: Added (Due: 2026-04-04)
+✅ Test Alert: Created (1 alert present)
+
+🔔 NOTIFICATION API ENDPOINTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. MEDICATION REMINDERS
+   GET /api/notifications/medication-reminders/{user_id}
+   └─ Returns medications due at current time of day
+
+2. VACCINATION REMINDERS  
+   GET /api/notifications/vaccination-due/{user_id}
+   └─ Returns vaccinations due in next 7 days
+
+3. HEALTH ALERTS
+   GET /api/notifications/alerts/{user_id}
+   └─ Returns all health alerts for user
+   Query: ?unread_only=true for unread only
+
+4. CREATE ALERT
+   POST /api/notifications/health-alert
+   Body: {"user_id": 1, "alert_type": "BP", "alert_level": "warning", "message": "..."}
+
+5. ACKNOWLEDGE ALERT
+   PUT /api/notifications/alerts/{alert_id}/acknowledge
+
+6. MEDICATION STOCK
+   POST /api/notifications/medication-stock/{medication_id}?stock={quantity}
+
+7. NOTIFICATION SETTINGS
+   GET /api/notifications/settings/{user_id}
+   POST /api/notifications/settings (with settings body)
+
+8. CAREGIVER NOTIFICATIONS
+   GET /api/notifications/caregiver/{caregiver_id}
+   PUT /api/notifications/caregiver/{notification_id}/read
+
+9. NOTIFICATION LOGS
+   POST /api/notifications/log (auto-logged)
+
+🧪 TEST COMMANDS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Test medication reminders (current time)
+Invoke-RestMethod -Uri "http://localhost:8000/api/notifications/medication-reminders/1"
+
+# Test vaccination due
+Invoke-RestMethod -Uri "http://localhost:8000/api/notifications/vaccination-due/1"
+
+# Get all alerts
+Invoke-RestMethod -Uri "http://localhost:8000/api/notifications/alerts/1"
+
+# Get unread alerts only
+Invoke-RestMethod -Uri "http://localhost:8000/api/notifications/alerts/1?unread_only=true"
+
+# Create a new health alert
+ = @{
+    user_id = 1
+    alert_type = "Blood Pressure"
+    alert_level = "warning"
+    message = "High blood pressure detected: 145/95"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:8000/api/notifications/health-alert" -Method Post -Body  -ContentType "application/json"
+
+# Update medication stock (triggers low stock alert if <=5)
+Invoke-RestMethod -Uri "http://localhost:8000/api/notifications/medication-stock/1?stock=3" -Method Post
+
+# Get notification settings
+Invoke-RestMethod -Uri "http://localhost:8000/api/notifications/settings/1"
+
+📋 DATABASE TABLES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Table Name              | Records | Purpose
+------------------------|---------|----------------------------------------
+users                   | 1       | User accounts
+medications             | 1       | Medication tracking
+medication_logs         | 0       | Taken/missed logs
+vaccinations            | 1       | Vaccination schedules
+health_data             | 0       | Health metrics history
+notification_settings   | 1       | User notification preferences
+notification_logs       | 0       | Notification history
+medication_stock        | 1       | Stock levels
+health_alerts           | 1       | Active alerts
+caregiver_notifications | 0       | Caregiver alerts
+
+🎯 AUTOMATIC ALERT TRIGGERS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When health data is saved, alerts are automatically created for:
+┌─────────────────────┬──────────────────┬─────────────────────────────┐
+│ Metric              │ Warning Range    │ Danger Range                │
+├─────────────────────┼──────────────────┼─────────────────────────────┤
+│ BP Systolic         │ > 140 or < 90    │ > 180 or < 60               │
+│ BP Diastolic        │ > 90 or < 60     │ > 120 or < 40               │
+│ Heart Rate          │ > 100 or < 60    │ > 130 or < 40               │
+│ Blood Sugar         │ > 140            │ > 200 or < 50               │
+└─────────────────────┴──────────────────┴─────────────────────────────┘
+
+When medication stock is updated:
+├─ Stock ≤ 5: Creates 'Low Stock' warning alert
+
+When medication reminders are checked:
+├─ Current time matches medication time: Returns due medications
+
+🚀 QUICK START FOR FRONTEND INTEGRATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Add to your App.tsx:
+
+import NotificationService from './services/NotificationService';
+import NotificationBell from './components/NotificationBell';
+
+// In your component
+useEffect(() => {
+    NotificationService.requestPermission();
+}, []);
+
+useEffect(() => {
+    if (selectedUser) {
+        NotificationService.startReminderCheck(selectedUser.id);
+    }
+    return () => NotificationService.stopReminderCheck();
+}, [selectedUser]);
+
+// Add to header
+<NotificationBell userId={selectedUser.id} />
+
+2. Add to health data save:
+
+import checkHealthMetricsAndAlert from './utils/HealthMetricsAlert';
+
+const alerts = await checkHealthMetricsAndAlert(userId, healthData);
+if (alerts.length > 0) {
+    console.log('Health alerts triggered:', alerts);
+}
+
+3. Add to medication management:
+
+// When taking medication
+await NotificationService.updateMedicationStock(medId, newStock);
+
+🔧 MAINTENANCE COMMANDS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# View all database tables
+python -c "import sqlite3; conn=sqlite3.connect('health_tracker.db'); c=conn.cursor(); c.execute('SELECT name FROM sqlite_master WHERE type=\"table\";'); print([t[0] for t in c.fetchall()])"
+
+# Count records in all tables
+python check_database.py
+
+# Clear old alerts (older than 30 days)
+python -c "import sqlite3; conn=sqlite3.connect('health_tracker.db'); c=conn.cursor(); c.execute('DELETE FROM health_alerts WHERE created_at < date(\"now\", \"-30 days\")'); conn.commit(); print('Old alerts cleared')"
+
+# Reset notification settings for a user
+python -c "import sqlite3; conn=sqlite3.connect('health_tracker.db'); c=conn.cursor(); c.execute('UPDATE notification_settings SET browser_notifications=1, email_notifications=0 WHERE user_id=1'); conn.commit(); print('Settings reset')"
+
+📊 MONITORING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Check backend logs
+Get-Content -Path backend.log -Tail 50 -Wait
+
+# Monitor API calls
+python -c "import requests; print(requests.get('http://localhost:8000/health').json())"
+
+# Test notification system end-to-end
+python test_notifications.py
+
+⚠️ TROUBLESHOOTING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Problem: No notifications showing
+Solution: Check Notification.requestPermission() was granted
+
+Problem: Medication reminders not triggering
+Solution: Verify medication time_of_day matches current time (morning/afternoon/evening/night)
+
+Problem: Alerts not creating
+Solution: Check health data values are outside normal ranges
+
+Problem: Database errors
+Solution: Run python update_database.py to ensure all tables exist
+
+🎉 SUCCESS! YOUR NOTIFICATION SYSTEM IS FULLY OPERATIONAL!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Current Backend Status: ✅ RUNNING
+Test User ID: 1
+Test Medication: Active for evening
+Test Alert: Present (ID: 1)
+
+Next Steps:
+1. Open http://localhost:5173
+2. Select or create a user
+3. Allow browser notifications
+4. Add health data to see alerts in action!
+5. Check notification bell for in-app alerts
+
+For API documentation, visit: http://localhost:8000/docs
