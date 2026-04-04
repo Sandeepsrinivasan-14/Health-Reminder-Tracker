@@ -20,7 +20,7 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [healthRecords, setHealthRecords] = useState([]);
 
-  const API_URL = 'https://health-reminder-tracker-api.onrender.com';
+  const API_URL = 'https://health-reminder-tracker.onrender.com';
 
   useEffect(() => {
     fetchUsers();
