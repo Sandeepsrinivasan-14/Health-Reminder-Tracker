@@ -1,8 +1,8 @@
-﻿services:
+services:
   - type: web
-    name: medical-health-tracker-api
+    name: health-reminder-tracker-api
     runtime: python
-    repo: https://github.com/Sandeepsrinivasan-14/Medical-Health-Tracker
+    repo: https://github.com/Sandeepsrinivasan-14/Health-Reminder-Tracker
     plan: free
     branch: main
     healthCheckPath: /health
