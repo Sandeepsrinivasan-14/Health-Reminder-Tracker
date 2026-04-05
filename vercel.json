@@ -1,10 +1,7 @@
 ﻿{
   "functions": {
     "api/index.py": {
-      "runtime": "python3.11",
-      "maxDuration": 30,
-      "memory": 1024,
-      "excludeFiles": "{tests/**,__tests__/**,**/*.test.py,**/test_*.py,fixtures/**,__fixtures__/**,testdata/**,sample-data/**,static/**,assets/**}"
+      "runtime": "python3.11"
     }
   },
   "rewrites": [
