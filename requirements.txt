@@ -1,5 +1,10 @@
-﻿streamlit==1.56.0
-pandas==2.2.0
-requests==2.31.0
+﻿fastapi==0.115.6
+uvicorn==0.34.0
+streamlit==1.35.0
+pandas==2.2.3
+requests==2.32.3
 plotly==5.24.0
-python-dotenv==1.0.0
+python-dotenv==1.0.1
+sqlalchemy==2.0.36
+pydantic==2.10.4
+python-multipart==0.0.20
