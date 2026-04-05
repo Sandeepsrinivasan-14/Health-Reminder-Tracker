@@ -1,25 +1,38 @@
-﻿from twilio.rest import Client
+﻿import os
+from twilio.rest import Client
+from dotenv import load_dotenv
 
-# Your Twilio credentials
-import os
-account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-TWILIO_NUMBER = "+15187194160"
-CARETAKER_NUMBER = "+917604950136"
+load_dotenv()
 
 def send_sos_alert(message=None):
     if message is None:
-        message = "🚨 EMERGENCY ALERT! Patient needs immediate help!"
+        message = "🚨 EMERGENCY SOS ALERT! Patient needs immediate medical attention!"
+    
+    account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+    auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+    from_number = os.getenv('TWILIO_PHONE_NUMBER')
+    to_number = os.getenv('CARETAKER_PHONE')
+    
+    # Print debug info
+    print(f"Account SID: {account_sid[:10]}...")
+    print(f"From: {from_number}")
+    print(f"To: {to_number}")
+    
+    if not account_sid or not auth_token:
+        return {"status": "failed", "error": "Twilio credentials missing"}
+    
+    if not to_number:
+        return {"status": "failed", "error": "Caretaker number missing"}
     
     try:
-        client = Client(ACCOUNT_SID, AUTH_TOKEN)
-        msg = client.messages.create(
+        client = Client(account_sid, auth_token)
+        sms = client.messages.create(
             body=message,
-            from_=TWILIO_NUMBER,
-            to=CARETAKER_NUMBER
+            from_=from_number,
+            to=to_number
         )
-        print(f'✅ SMS sent! SID: {msg.sid}')
-        return {"status": "sent", "sid": msg.sid}
+        print(f"✅ SOS Sent! SID: {sms.sid}")
+        return {"status": "sent", "sid": sms.sid}
     except Exception as e:
-        print(f'❌ Error: {e}')
+        print(f"❌ Error: {e}")
         return {"status": "failed", "error": str(e)}
