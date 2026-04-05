@@ -7,28 +7,28 @@ st.set_page_config(page_title="Medical Health Tracker", page_icon="🏥", layout
 
 # HARDCODED USERS - Works without backend
 USERS = [
-    {"id": 1, "name": "Test Patient", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68},
-    {"id": 2, "name": "Rajesh Kumar", "condition": "Diabetes", "bp_sys": 135, "bp_dia": 85, "hr": 78, "sugar": 180, "weight": 75},
-    {"id": 3, "name": "Priya Sharma", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68},
-    {"id": 4, "name": "Amit Patel", "condition": "Heart Disease", "bp_sys": 145, "bp_dia": 90, "hr": 95, "sugar": 115, "weight": 78},
-    {"id": 5, "name": "Sunita Reddy", "condition": "Hypertension", "bp_sys": 155, "bp_dia": 95, "hr": 82, "sugar": 110, "weight": 80},
-    {"id": 6, "name": "Vikram Singh", "condition": "Diabetes", "bp_sys": 135, "bp_dia": 85, "hr": 78, "sugar": 180, "weight": 75},
-    {"id": 7, "name": "Neha Gupta", "condition": "Asthma", "bp_sys": 120, "bp_dia": 78, "hr": 75, "sugar": 95, "weight": 65},
-    {"id": 8, "name": "Anand Desai", "condition": "Hypertension", "bp_sys": 155, "bp_dia": 95, "hr": 82, "sugar": 110, "weight": 80},
-    {"id": 9, "name": "Kavita Nair", "condition": "Thyroid", "bp_sys": 125, "bp_dia": 80, "hr": 70, "sugar": 100, "weight": 85},
-    {"id": 10, "name": "Suresh Iyer", "condition": "Heart Disease", "bp_sys": 145, "bp_dia": 90, "hr": 95, "sugar": 115, "weight": 78},
-    {"id": 11, "name": "Meera Joshi", "condition": "Migraine", "bp_sys": 118, "bp_dia": 75, "hr": 68, "sugar": 92, "weight": 62},
-    {"id": 12, "name": "Rohan Mehta", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68},
-    {"id": 13, "name": "Anjali Kulkarni", "condition": "Diabetes", "bp_sys": 135, "bp_dia": 85, "hr": 78, "sugar": 180, "weight": 75},
-    {"id": 14, "name": "Deepak Saxena", "condition": "Obesity", "bp_sys": 140, "bp_dia": 88, "hr": 85, "sugar": 125, "weight": 110},
-    {"id": 15, "name": "Swati Choudhary", "condition": "Anemia", "bp_sys": 105, "bp_dia": 65, "hr": 88, "sugar": 85, "weight": 55},
-    {"id": 16, "name": "Manoj Verma", "condition": "Hypertension", "bp_sys": 155, "bp_dia": 95, "hr": 82, "sugar": 110, "weight": 80},
-    {"id": 17, "name": "Pooja Malhotra", "condition": "Osteoporosis", "bp_sys": 130, "bp_dia": 82, "hr": 72, "sugar": 100, "weight": 60},
-    {"id": 18, "name": "Arjun Nair", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68},
-    {"id": 19, "name": "Divya Menon", "condition": "PCOS", "bp_sys": 128, "bp_dia": 82, "hr": 76, "sugar": 115, "weight": 82},
-    {"id": 20, "name": "Sanjay Gupta", "condition": "Diabetes", "bp_sys": 135, "bp_dia": 85, "hr": 78, "sugar": 180, "weight": 75},
-    {"id": 21, "name": "Lata Mangeshkar", "condition": "Hypertension", "bp_sys": 155, "bp_dia": 95, "hr": 82, "sugar": 110, "weight": 80},
-    {"id": 22, "name": "Lohith", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68},
+    {"id": 1, "name": "Test Patient", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68.0},
+    {"id": 2, "name": "Rajesh Kumar", "condition": "Diabetes", "bp_sys": 135, "bp_dia": 85, "hr": 78, "sugar": 180, "weight": 75.0},
+    {"id": 3, "name": "Priya Sharma", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68.0},
+    {"id": 4, "name": "Amit Patel", "condition": "Heart Disease", "bp_sys": 145, "bp_dia": 90, "hr": 95, "sugar": 115, "weight": 78.0},
+    {"id": 5, "name": "Sunita Reddy", "condition": "Hypertension", "bp_sys": 155, "bp_dia": 95, "hr": 82, "sugar": 110, "weight": 80.0},
+    {"id": 6, "name": "Vikram Singh", "condition": "Diabetes", "bp_sys": 135, "bp_dia": 85, "hr": 78, "sugar": 180, "weight": 75.0},
+    {"id": 7, "name": "Neha Gupta", "condition": "Asthma", "bp_sys": 120, "bp_dia": 78, "hr": 75, "sugar": 95, "weight": 65.0},
+    {"id": 8, "name": "Anand Desai", "condition": "Hypertension", "bp_sys": 155, "bp_dia": 95, "hr": 82, "sugar": 110, "weight": 80.0},
+    {"id": 9, "name": "Kavita Nair", "condition": "Thyroid", "bp_sys": 125, "bp_dia": 80, "hr": 70, "sugar": 100, "weight": 85.0},
+    {"id": 10, "name": "Suresh Iyer", "condition": "Heart Disease", "bp_sys": 145, "bp_dia": 90, "hr": 95, "sugar": 115, "weight": 78.0},
+    {"id": 11, "name": "Meera Joshi", "condition": "Migraine", "bp_sys": 118, "bp_dia": 75, "hr": 68, "sugar": 92, "weight": 62.0},
+    {"id": 12, "name": "Rohan Mehta", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68.0},
+    {"id": 13, "name": "Anjali Kulkarni", "condition": "Diabetes", "bp_sys": 135, "bp_dia": 85, "hr": 78, "sugar": 180, "weight": 75.0},
+    {"id": 14, "name": "Deepak Saxena", "condition": "Obesity", "bp_sys": 140, "bp_dia": 88, "hr": 85, "sugar": 125, "weight": 110.0},
+    {"id": 15, "name": "Swati Choudhary", "condition": "Anemia", "bp_sys": 105, "bp_dia": 65, "hr": 88, "sugar": 85, "weight": 55.0},
+    {"id": 16, "name": "Manoj Verma", "condition": "Hypertension", "bp_sys": 155, "bp_dia": 95, "hr": 82, "sugar": 110, "weight": 80.0},
+    {"id": 17, "name": "Pooja Malhotra", "condition": "Osteoporosis", "bp_sys": 130, "bp_dia": 82, "hr": 72, "sugar": 100, "weight": 60.0},
+    {"id": 18, "name": "Arjun Nair", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68.0},
+    {"id": 19, "name": "Divya Menon", "condition": "PCOS", "bp_sys": 128, "bp_dia": 82, "hr": 76, "sugar": 115, "weight": 82.0},
+    {"id": 20, "name": "Sanjay Gupta", "condition": "Diabetes", "bp_sys": 135, "bp_dia": 85, "hr": 78, "sugar": 180, "weight": 75.0},
+    {"id": 21, "name": "Lata Mangeshkar", "condition": "Hypertension", "bp_sys": 155, "bp_dia": 95, "hr": 82, "sugar": 110, "weight": 80.0},
+    {"id": 22, "name": "Lohith", "condition": "Healthy", "bp_sys": 118, "bp_dia": 78, "hr": 72, "sugar": 95, "weight": 68.0},
 ]
 
 # Tips for conditions
@@ -105,11 +105,11 @@ with col_left:
             
             user = st.session_state.selected_user
             
-            bp_sys = st.number_input("BP Systolic", value=user["bp_sys"], step=1)
-            bp_dia = st.number_input("BP Diastolic", value=user["bp_dia"], step=1)
-            heart_rate = st.number_input("Heart Rate", value=user["hr"], step=1)
-            blood_sugar = st.number_input("Blood Sugar", value=user["sugar"], step=1)
-            weight = st.number_input("Weight (kg)", value=user["weight"], step=0.5)
+            bp_sys = st.number_input("BP Systolic", value=int(user["bp_sys"]), step=1)
+            bp_dia = st.number_input("BP Diastolic", value=int(user["bp_dia"]), step=1)
+            heart_rate = st.number_input("Heart Rate", value=int(user["hr"]), step=1)
+            blood_sugar = st.number_input("Blood Sugar", value=int(user["sugar"]), step=1)
+            weight = st.number_input("Weight (kg)", value=float(user["weight"]), step=0.5)
             
             col_save, col_analyze = st.columns(2)
             with col_save:
