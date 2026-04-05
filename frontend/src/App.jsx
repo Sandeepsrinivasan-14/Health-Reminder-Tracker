@@ -1,71 +1,42 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState } from 'react';
+
+// HARDCODED USERS - Guaranteed to show immediately
+const USERS = [
+  { id: 1, name: "Test Patient" },
+  { id: 2, name: "Rajesh Kumar" },
+  { id: 3, name: "Priya Sharma" },
+  { id: 4, name: "Amit Patel" },
+  { id: 5, name: "Sunita Reddy" },
+  { id: 6, name: "Vikram Singh" },
+  { id: 7, name: "Neha Gupta" },
+  { id: 8, name: "Anand Desai" },
+  { id: 9, name: "Kavita Nair" },
+  { id: 10, name: "Suresh Iyer" },
+  { id: 11, name: "Meera Joshi" },
+  { id: 12, name: "Rohan Mehta" },
+  { id: 13, name: "Anjali Kulkarni" },
+  { id: 14, name: "Deepak Saxena" },
+  { id: 15, name: "Swati Choudhary" },
+  { id: 16, name: "Manoj Verma" },
+  { id: 17, name: "Pooja Malhotra" },
+  { id: 18, name: "Arjun Nair" },
+  { id: 19, name: "Divya Menon" },
+  { id: 20, name: "Sanjay Gupta" },
+  { id: 21, name: "Lata Mangeshkar" },
+  { id: 22, name: "Lohith" }
+];
 
 function App() {
   const [selectedUser, setSelectedUser] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [healthData, setHealthData] = useState({ bp_systolic: '', bp_diastolic: '', heart_rate: '', blood_sugar: '', weight: '' });
-  const [riskResult, setRiskResult] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [aiQuestion, setAiQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [healthRecords, setHealthRecords] = useState([]);
+  const [riskResult, setRiskResult] = useState(null);
   const [healthTips, setHealthTips] = useState([]);
   const [showTips, setShowTips] = useState(false);
 
   const API_URL = 'https://health-reminder-tracker.onrender.com';
-
-  // Load users on startup
-  useEffect(() => {
-    loadUsers();
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setIsDarkMode(true);
-      document.body.style.background = '#0f172a';
-    }
-  }, []);
-
-  // Load health records when user changes
-  useEffect(() => {
-    if (selectedUser) {
-      loadHealthRecords();
-    }
-  }, [selectedUser]);
-
-  const loadUsers = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/users`);
-      const data = await response.json();
-      console.log("Users loaded:", data);
-      setUsers(data);
-    } catch (error) {
-      console.error("Failed to load users:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadHealthRecords = async () => {
-    try {
-      const response = await fetch(`${API_URL}/health-data/user/${selectedUser.id}`);
-      const data = await response.json();
-      setHealthRecords(data);
-      if (data && data.length > 0) {
-        const latest = data[0];
-        setHealthData({
-          bp_systolic: latest.bp_systolic || '',
-          bp_diastolic: latest.bp_diastolic || '',
-          heart_rate: latest.heart_rate || '',
-          blood_sugar: latest.blood_sugar || '',
-          weight: latest.weight || ''
-        });
-      }
-    } catch (error) {
-      console.error("Failed to load health records:", error);
-    }
-  };
 
   const saveHealthData = async () => {
     if (!selectedUser) { alert('Select a user first'); return; }
@@ -83,7 +54,6 @@ function App() {
       body: JSON.stringify(data)
     });
     alert('Health data saved!');
-    loadHealthRecords();
   };
 
   const analyzeRisk = async () => {
@@ -97,12 +67,12 @@ function App() {
         weight: parseFloat(healthData.weight) || 70
       }
     };
-    const response = await fetch(`${API_URL}/api/ai/health-risk`, {
+    const res = await fetch(`${API_URL}/api/ai/health-risk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(riskBody)
     });
-    const data = await response.json();
+    const data = await res.json();
     setRiskResult(data);
   };
 
@@ -110,172 +80,136 @@ function App() {
     if (!selectedUser) { alert('Select a user first'); return; }
     if (!aiQuestion.trim()) return;
     
-    const userMessage = aiQuestion;
-    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setAiQuestion('');
+    setChatMessages(prev => [...prev, { role: 'user', content: aiQuestion }]);
     setIsLoading(true);
     
-    try {
-      const response = await fetch(`${API_URL}/api/ai/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: userMessage, health_data: null, session_id: selectedUser.id.toString() })
-      });
-      const data = await response.json();
-      setChatMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-    } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, please try again.' }]);
-    } finally {
-      setIsLoading(false);
-    }
+    const res = await fetch(`${API_URL}/api/ai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: aiQuestion, health_data: null, session_id: selectedUser.id.toString() })
+    });
+    const data = await res.json();
+    setChatMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+    setAiQuestion('');
+    setIsLoading(false);
   };
 
   const loadHealthTips = async () => {
-    if (!selectedUser) { alert('Select a user first'); return; }
-    try {
-      const response = await fetch(`${API_URL}/health-tips`);
-      const data = await response.json();
-      setHealthTips(data);
-      setShowTips(true);
-    } catch (error) {
-      setHealthTips(['Unable to load tips']);
-      setShowTips(true);
-    }
+    const res = await fetch(`${API_URL}/health-tips`);
+    const data = await res.json();
+    setHealthTips(data);
+    setShowTips(true);
   };
 
   const sendSOS = async () => {
-    try {
-      await fetch(`${API_URL}/sos`, { method: 'POST' });
-      alert('🚨 SOS Alert Sent! Caregiver notified.');
-    } catch (err) {
-      alert('❌ Failed to send SOS');
-    }
+    await fetch(`${API_URL}/sos`, { method: 'POST' });
+    alert('🚨 SOS Alert Sent!');
   };
 
   const exportPDF = () => {
-    if (!selectedUser) { alert('Select a user first'); return; }
+    if (!selectedUser) return;
     window.open(`${API_URL}/export-pdf/${selectedUser.id}`, '_blank');
   };
 
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
-    document.body.style.background = newTheme ? '#0f172a' : '#f0f2f5';
-  };
+  return (
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', fontFamily: 'Arial', background: '#f0f2f5', minHeight: '100vh' }}>
+      <div style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', borderRadius: '15px', padding: '20px', marginBottom: '20px', color: 'white' }}>
+        <h1 style={{ margin: 0 }}>🏥 Medical Health Tracker</h1>
+        <p>AI-Powered Healthcare Assistant</p>
+        <div style={{ marginTop: '10px', background: 'rgba(255,255,255,0.2)', padding: '5px 10px', borderRadius: '10px', display: 'inline-block' }}>✅ API: Healthy</div>
+      </div>
 
-  const cardBg = isDarkMode ? '#1e293b' : '#ffffff';
-  const textColor = isDarkMode ? '#f1f5f9' : '#1f2937';
-  const borderColor = isDarkMode ? '#334155' : '#e5e7eb';
-  const inputBg = isDarkMode ? '#334155' : '#ffffff';
-
-  return React.createElement('div', { style: { minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)', padding: '20px' } },
-    React.createElement('div', { style: { maxWidth: '1400px', margin: '0 auto' } },
-      
-      React.createElement('div', { style: { background: cardBg, borderRadius: '24px', padding: '20px 30px', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' } },
-        React.createElement('div', null,
-          React.createElement('h1', { style: { margin: 0, fontSize: '28px', color: textColor } }, '🏥 Medical Health Tracker'),
-          React.createElement('p', { style: { margin: '5px 0 0', color: textColor } }, 'AI-Powered Healthcare Assistant')
-        ),
-        React.createElement('div', { style: { display: 'flex', gap: '15px', alignItems: 'center' } },
-          React.createElement('button', { onClick: toggleTheme, style: { background: 'rgba(0,0,0,0.1)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '20px', cursor: 'pointer', color: textColor } }, isDarkMode ? '☀️' : '🌙'),
-          React.createElement('div', { style: { background: '#10b981', padding: '6px 16px', borderRadius: '50px', color: 'white', fontSize: '13px', fontWeight: '600' } }, '✅ API: Healthy')
-        )
-      ),
-
-      React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginBottom: '25px' } },
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
         
-        React.createElement('div', { style: { background: cardBg, borderRadius: '24px', padding: '25px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' } },
-          React.createElement('h2', { style: { color: textColor, marginBottom: '20px' } }, '👤 Select Patient'),
-          loading ? React.createElement('div', { style: { textAlign: 'center', padding: '20px', color: textColor } }, 'Loading patients...') :
-            React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '10px', maxHeight: '300px', overflowY: 'auto' } },
-              users.map(user => React.createElement('button', { key: user.id, onClick: () => setSelectedUser(user), style: { padding: '8px 18px', background: selectedUser?.id === user.id ? 'linear-gradient(135deg, #667eea, #764ba2)' : isDarkMode ? '#334155' : '#f3f4f6', color: selectedUser?.id === user.id ? 'white' : textColor, border: 'none', borderRadius: '50px', cursor: 'pointer', fontSize: '13px', margin: '4px' } }, user.name))
-            ),
-          selectedUser && React.createElement('div', { style: { marginTop: '15px', padding: '12px', background: 'rgba(16,185,129,0.1)', borderRadius: '12px' } }, 
-            React.createElement('span', { style: { color: '#059669', fontWeight: '600' } }, '✅ Selected: ', selectedUser.name)
-          )
-        ),
+        {/* User Selection - NOW WITH HARDCODED USERS */}
+        <div style={{ background: 'white', borderRadius: '15px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ margin: '0 0 15px', color: '#333' }}>👤 Select Patient</h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+            {USERS.map(user => (
+              <button
+                key={user.id}
+                onClick={() => setSelectedUser(user)}
+                style={{
+                  padding: '8px 16px',
+                  background: selectedUser?.id === user.id ? '#667eea' : '#e5e7eb',
+                  color: selectedUser?.id === user.id ? 'white' : '#333',
+                  border: 'none',
+                  borderRadius: '20px',
+                  cursor: 'pointer'
+                }}
+              >
+                {user.name}
+              </button>
+            ))}
+          </div>
+          {selectedUser && <p style={{ marginTop: '10px', color: '#10b981' }}>✅ Selected: {selectedUser.name}</p>}
+        </div>
 
-        React.createElement('div', { style: { background: cardBg, borderRadius: '24px', padding: '25px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', textAlign: 'center' } },
-          React.createElement('h2', { style: { color: textColor, marginBottom: '20px' } }, '🚨 Emergency SOS'),
-          React.createElement('button', { onClick: sendSOS, style: { background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', padding: '16px 40px', fontSize: '18px', fontWeight: 'bold', border: 'none', borderRadius: '50px', cursor: 'pointer', boxShadow: '0 10px 30px rgba(239,68,68,0.3)' } }, '🚨 SOS EMERGENCY'),
-          React.createElement('button', { onClick: exportPDF, style: { marginTop: '15px', padding: '10px 20px', background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' } }, '📄 Export PDF Report')
-        )
-      ),
+        {/* SOS Card */}
+        <div style={{ background: 'white', borderRadius: '15px', padding: '20px', textAlign: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ margin: '0 0 15px', color: '#333' }}>🚨 Emergency SOS</h2>
+          <button onClick={sendSOS} style={{ background: '#ef4444', color: 'white', padding: '15px 30px', fontSize: '18px', fontWeight: 'bold', border: 'none', borderRadius: '50px', cursor: 'pointer' }}>🚨 SOS EMERGENCY</button>
+          <button onClick={exportPDF} style={{ marginTop: '15px', padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', marginLeft: '10px' }}>📄 Export PDF</button>
+        </div>
+      </div>
 
-      React.createElement('div', { style: { background: cardBg, borderRadius: '24px', padding: '25px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', marginBottom: '25px' } },
-        React.createElement('h2', { style: { color: textColor, marginBottom: '20px' } }, '📊 Health Parameter Tracker'),
-        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '15px', marginBottom: '20px' } },
-          [
-            { label: 'BP Systolic', key: 'bp_systolic', placeholder: '120' },
-            { label: 'BP Diastolic', key: 'bp_diastolic', placeholder: '80' },
-            { label: 'Heart Rate', key: 'heart_rate', placeholder: '72' },
-            { label: 'Blood Sugar', key: 'blood_sugar', placeholder: '110' },
-            { label: 'Weight (kg)', key: 'weight', placeholder: '70' }
-          ].map(field => React.createElement('div', { key: field.key },
-            React.createElement('label', { style: { display: 'block', marginBottom: '8px', color: textColor, fontWeight: '500' } }, field.label),
-            React.createElement('input', { type: 'number', placeholder: field.placeholder, value: healthData[field.key], onChange: (e) => setHealthData({...healthData, [field.key]: e.target.value}), style: { width: '100%', padding: '12px', border: `1px solid ${borderColor}`, borderRadius: '12px', background: inputBg, color: textColor } })
-          ))
-        ),
-        React.createElement('div', { style: { display: 'flex', gap: '12px', marginBottom: '20px' } },
-          React.createElement('button', { onClick: saveHealthData, style: { padding: '12px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' } }, '💾 Save Health Data'),
-          React.createElement('button', { onClick: analyzeRisk, style: { padding: '12px 24px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' } }, '📊 Analyze Health Status')
-        ),
+      {/* Health Parameters */}
+      <div style={{ background: 'white', borderRadius: '15px', padding: '20px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ margin: '0 0 15px', color: '#333' }}>📊 Health Parameter Tracker</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '15px', marginBottom: '15px' }}>
+          <input type="number" placeholder="BP Systolic" value={healthData.bp_systolic} onChange={(e) => setHealthData({...healthData, bp_systolic: e.target.value})} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+          <input type="number" placeholder="BP Diastolic" value={healthData.bp_diastolic} onChange={(e) => setHealthData({...healthData, bp_diastolic: e.target.value})} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+          <input type="number" placeholder="Heart Rate" value={healthData.heart_rate} onChange={(e) => setHealthData({...healthData, heart_rate: e.target.value})} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+          <input type="number" placeholder="Blood Sugar" value={healthData.blood_sugar} onChange={(e) => setHealthData({...healthData, blood_sugar: e.target.value})} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+          <input type="number" placeholder="Weight (kg)" value={healthData.weight} onChange={(e) => setHealthData({...healthData, weight: e.target.value})} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={saveHealthData} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>💾 Save Health Data</button>
+          <button onClick={analyzeRisk} style={{ padding: '10px 20px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>📊 Analyze Health Status</button>
+        </div>
         
-        riskResult && React.createElement('div', { style: { marginTop: '15px', padding: '18px', borderRadius: '16px', background: riskResult.risk_level === 'HIGH' ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)' } },
-          React.createElement('h4', { style: { margin: 0, color: riskResult.risk_level === 'HIGH' ? '#dc2626' : '#059669' } }, 'Risk Level: ', riskResult.risk_level),
-          React.createElement('p', { style: { margin: '8px 0', color: textColor } }, React.createElement('strong', null, 'Issues: '), riskResult.risks?.join(', ') || 'None'),
-          React.createElement('p', { style: { margin: 0, color: textColor } }, React.createElement('strong', null, 'Recommendations: '), riskResult.recommendations?.join('; ') || 'Continue monitoring')
-        ),
+        {riskResult && (
+          <div style={{ marginTop: '15px', padding: '15px', background: riskResult.risk_level === 'HIGH' ? '#fee2e2' : '#d1fae5', borderRadius: '8px' }}>
+            <h4>Risk Level: {riskResult.risk_level}</h4>
+            <p><strong>Issues:</strong> {riskResult.risks?.join(', ') || 'None'}</p>
+            <p><strong>Recommendations:</strong> {riskResult.recommendations?.join('; ') || 'Continue monitoring'}</p>
+          </div>
+        )}
+      </div>
 
-        healthRecords.length > 0 && React.createElement('div', { style: { marginTop: '20px' } },
-          React.createElement('h3', { style: { color: textColor, marginBottom: '10px' } }, '📋 Recent Health Records'),
-          React.createElement('div', { style: { overflowX: 'auto' } },
-            React.createElement('table', { style: { width: '100%', borderCollapse: 'collapse' } },
-              React.createElement('thead', null,
-                React.createElement('tr', { style: { background: isDarkMode ? '#334155' : '#f3f4f6' } },
-                  ['Date', 'BP', 'HR', 'Sugar', 'Weight'].map(h => React.createElement('th', { key: h, style: { padding: '10px', textAlign: 'left', color: textColor } }, h))
-                )
-              ),
-              React.createElement('tbody', null,
-                healthRecords.slice(0, 5).map((r, i) => React.createElement('tr', { key: i, style: { borderBottom: `1px solid ${borderColor}` } },
-                  React.createElement('td', { style: { padding: '8px', color: textColor } }, new Date(r.recorded_at).toLocaleDateString()),
-                  React.createElement('td', { style: { padding: '8px', color: textColor } }, `${r.bp_systolic}/${r.bp_diastolic}`),
-                  React.createElement('td', { style: { padding: '8px', color: textColor } }, r.heart_rate),
-                  React.createElement('td', { style: { padding: '8px', color: textColor } }, r.blood_sugar),
-                  React.createElement('td', { style: { padding: '8px', color: textColor } }, r.weight)
-                ))
-              )
-            )
-          )
-        )
-      ),
+      {/* AI Chat */}
+      <div style={{ background: 'white', borderRadius: '15px', padding: '20px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ margin: '0 0 15px', color: '#333' }}>🤖 AI Health Assistant</h2>
+        {selectedUser ? (
+          <>
+            <div style={{ height: '250px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '8px', padding: '10px', marginBottom: '10px', background: '#f9fafb' }}>
+              {chatMessages.length === 0 && <p style={{ textAlign: 'center', color: '#999' }}>Ask me about {selectedUser.name}'s health!</p>}
+              {chatMessages.map((msg, i) => (
+                <div key={i} style={{ marginBottom: '8px', textAlign: msg.role === 'user' ? 'right' : 'left' }}>
+                  <span style={{ display: 'inline-block', padding: '8px 12px', borderRadius: '12px', background: msg.role === 'user' ? '#667eea' : '#e5e7eb', color: msg.role === 'user' ? 'white' : '#333' }}>
+                    <strong>{msg.role === 'user' ? 'You' : 'AI'}:</strong> {msg.content}
+                  </span>
+                </div>
+              ))}
+              {isLoading && <p style={{ color: '#999' }}>AI is thinking...</p>}
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input type="text" placeholder="Ask about health..." value={aiQuestion} onChange={(e) => setAiQuestion(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && askAI()} style={{ flex: 1, padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+              <button onClick={askAI} disabled={isLoading} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Send</button>
+            </div>
+          </>
+        ) : <p style={{ textAlign: 'center', padding: '40px', color: '#999' }}>👤 Please select a patient first</p>}
+      </div>
 
-      React.createElement('div', { style: { background: cardBg, borderRadius: '24px', padding: '25px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' } },
-        React.createElement('h2', { style: { color: textColor, marginBottom: '20px' } }, '🤖 AI Health Assistant'),
-        selectedUser ? [
-          React.createElement('div', { key: 'chat', style: { height: '300px', overflowY: 'auto', background: isDarkMode ? '#0f172a' : '#f9fafb', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: `1px solid ${borderColor}` } },
-            chatMessages.length === 0 && React.createElement('div', { style: { textAlign: 'center', color: '#9ca3af', padding: '50px' } }, '💬 Ask me anything about your health!'),
-            chatMessages.map((msg, idx) => React.createElement('div', { key: idx, style: { marginBottom: '12px', textAlign: msg.role === 'user' ? 'right' : 'left' } },
-              React.createElement('div', { style: { display: 'inline-block', maxWidth: '80%', padding: '10px 16px', borderRadius: '20px', background: msg.role === 'user' ? 'linear-gradient(135deg, #667eea, #764ba2)' : isDarkMode ? '#334155' : 'white', color: msg.role === 'user' ? 'white' : textColor } },
-                React.createElement('strong', null, msg.role === 'user' ? 'You' : 'AI'), ': ', msg.content
-              )
-            )),
-            isLoading && React.createElement('div', { style: { textAlign: 'left' } }, React.createElement('div', { style: { display: 'inline-block', padding: '10px 16px', borderRadius: '20px', background: isDarkMode ? '#334155' : '#f3f4f6', color: '#9ca3af' } }, 'AI is thinking...'))
-          ),
-          React.createElement('div', { key: 'input', style: { display: 'flex', gap: '10px' } },
-            React.createElement('input', { type: 'text', placeholder: 'Type your health question...', value: aiQuestion, onChange: (e) => setAiQuestion(e.target.value), onKeyPress: (e) => e.key === 'Enter' && askAI(), style: { flex: 1, padding: '12px', border: `1px solid ${borderColor}`, borderRadius: '12px', background: inputBg, color: textColor } }),
-            React.createElement('button', { onClick: askAI, disabled: isLoading, style: { padding: '12px 24px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' } }, 'Send')
-          )
-        ] : React.createElement('div', { style: { textAlign: 'center', padding: '60px', color: '#9ca3af' } }, '👤 Please select a patient first')
-      ),
-
-      React.createElement('div', { style: { background: cardBg, borderRadius: '24px', padding: '25px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', marginTop: '25px' } },
-        React.createElement('h2', { style: { color: textColor, marginBottom: '20px' } }, '💡 Health Tips'),
-        React.createElement('button', { onClick: loadHealthTips, style: { padding: '12px 24px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' } }, '📋 Load Health Tips'),
-        showTips && healthTips.length > 0 && React.createElement('div', { style: { marginTop: '15px' } }, healthTips.map((tip, i) => React.createElement('div', { key: i, style: { padding: '12px', marginBottom: '8px', background: '#f3f4f6', borderRadius: '8px', color: '#333' } }, '✓ ', tip)))
-      )
-    )
+      {/* Health Tips */}
+      <div style={{ background: 'white', borderRadius: '15px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ margin: '0 0 15px', color: '#333' }}>💡 Health Tips</h2>
+        <button onClick={loadHealthTips} style={{ padding: '10px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>📋 Load Health Tips</button>
+        {showTips && healthTips.map((tip, i) => (
+          <div key={i} style={{ padding: '10px', marginTop: '8px', background: '#f3f4f6', borderRadius: '8px' }}>✓ {tip}</div>
+        ))}
+      </div>
+    </div>
   );
 }
 
