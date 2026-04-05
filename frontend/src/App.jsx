@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 
 // HARDCODED USERS - Guaranteed to show immediately
 const USERS = [
@@ -103,7 +103,7 @@ function App() {
 
   const sendSOS = async () => {
     await fetch(`${API_URL}/sos`, { method: 'POST' });
-    alert('🚨 SOS Alert Sent!');
+    alert('?? SOS Alert Sent!');
   };
 
   const exportPDF = () => {
@@ -114,16 +114,16 @@ function App() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', fontFamily: 'Arial', background: '#f0f2f5', minHeight: '100vh' }}>
       <div style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', borderRadius: '15px', padding: '20px', marginBottom: '20px', color: 'white' }}>
-        <h1 style={{ margin: 0 }}>🏥 Medical Health Tracker</h1>
+        <h1 style={{ margin: 0 }}>?? Medical Health Tracker</h1>
         <p>AI-Powered Healthcare Assistant</p>
-        <div style={{ marginTop: '10px', background: 'rgba(255,255,255,0.2)', padding: '5px 10px', borderRadius: '10px', display: 'inline-block' }}>✅ API: Healthy</div>
+        <div style={{ marginTop: '10px', background: 'rgba(255,255,255,0.2)', padding: '5px 10px', borderRadius: '10px', display: 'inline-block' }}>? API: Healthy</div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
         
         {/* User Selection - NOW WITH HARDCODED USERS */}
         <div style={{ background: 'white', borderRadius: '15px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-          <h2 style={{ margin: '0 0 15px', color: '#333' }}>👤 Select Patient</h2>
+          <h2 style={{ margin: '0 0 15px', color: '#333' }}>?? Select Patient</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
             {USERS.map(user => (
               <button
@@ -142,20 +142,20 @@ function App() {
               </button>
             ))}
           </div>
-          {selectedUser && <p style={{ marginTop: '10px', color: '#10b981' }}>✅ Selected: {selectedUser.name}</p>}
+          {selectedUser && <p style={{ marginTop: '10px', color: '#10b981' }}>? Selected: {selectedUser.name}</p>}
         </div>
 
         {/* SOS Card */}
         <div style={{ background: 'white', borderRadius: '15px', padding: '20px', textAlign: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-          <h2 style={{ margin: '0 0 15px', color: '#333' }}>🚨 Emergency SOS</h2>
-          <button onClick={sendSOS} style={{ background: '#ef4444', color: 'white', padding: '15px 30px', fontSize: '18px', fontWeight: 'bold', border: 'none', borderRadius: '50px', cursor: 'pointer' }}>🚨 SOS EMERGENCY</button>
-          <button onClick={exportPDF} style={{ marginTop: '15px', padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', marginLeft: '10px' }}>📄 Export PDF</button>
+          <h2 style={{ margin: '0 0 15px', color: '#333' }}>?? Emergency SOS</h2>
+          <button onClick={sendSOS} style={{ background: '#ef4444', color: 'white', padding: '15px 30px', fontSize: '18px', fontWeight: 'bold', border: 'none', borderRadius: '50px', cursor: 'pointer' }}>?? SOS EMERGENCY</button>
+          <button onClick={exportPDF} style={{ marginTop: '15px', padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', marginLeft: '10px' }}>?? Export PDF</button>
         </div>
       </div>
 
       {/* Health Parameters */}
       <div style={{ background: 'white', borderRadius: '15px', padding: '20px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ margin: '0 0 15px', color: '#333' }}>📊 Health Parameter Tracker</h2>
+        <h2 style={{ margin: '0 0 15px', color: '#333' }}>?? Health Parameter Tracker</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '15px', marginBottom: '15px' }}>
           <input type="number" placeholder="BP Systolic" value={healthData.bp_systolic} onChange={(e) => setHealthData({...healthData, bp_systolic: e.target.value})} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
           <input type="number" placeholder="BP Diastolic" value={healthData.bp_diastolic} onChange={(e) => setHealthData({...healthData, bp_diastolic: e.target.value})} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
@@ -164,8 +164,8 @@ function App() {
           <input type="number" placeholder="Weight (kg)" value={healthData.weight} onChange={(e) => setHealthData({...healthData, weight: e.target.value})} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={saveHealthData} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>💾 Save Health Data</button>
-          <button onClick={analyzeRisk} style={{ padding: '10px 20px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>📊 Analyze Health Status</button>
+          <button onClick={saveHealthData} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>?? Save Health Data</button>
+          <button onClick={analyzeRisk} style={{ padding: '10px 20px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>?? Analyze Health Status</button>
         </div>
         
         {riskResult && (
@@ -179,7 +179,7 @@ function App() {
 
       {/* AI Chat */}
       <div style={{ background: 'white', borderRadius: '15px', padding: '20px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ margin: '0 0 15px', color: '#333' }}>🤖 AI Health Assistant</h2>
+        <h2 style={{ margin: '0 0 15px', color: '#333' }}>?? AI Health Assistant</h2>
         {selectedUser ? (
           <>
             <div style={{ height: '250px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '8px', padding: '10px', marginBottom: '10px', background: '#f9fafb' }}>
@@ -198,15 +198,15 @@ function App() {
               <button onClick={askAI} disabled={isLoading} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Send</button>
             </div>
           </>
-        ) : <p style={{ textAlign: 'center', padding: '40px', color: '#999' }}>👤 Please select a patient first</p>}
+        ) : <p style={{ textAlign: 'center', padding: '40px', color: '#999' }}>?? Please select a patient first</p>}
       </div>
 
       {/* Health Tips */}
       <div style={{ background: 'white', borderRadius: '15px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ margin: '0 0 15px', color: '#333' }}>💡 Health Tips</h2>
-        <button onClick={loadHealthTips} style={{ padding: '10px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>📋 Load Health Tips</button>
+        <h2 style={{ margin: '0 0 15px', color: '#333' }}>?? Health Tips</h2>
+        <button onClick={loadHealthTips} style={{ padding: '10px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>?? Load Health Tips</button>
         {showTips && healthTips.map((tip, i) => (
-          <div key={i} style={{ padding: '10px', marginTop: '8px', background: '#f3f4f6', borderRadius: '8px' }}>✓ {tip}</div>
+          <div key={i} style={{ padding: '10px', marginTop: '8px', background: '#f3f4f6', borderRadius: '8px' }}>? {tip}</div>
         ))}
       </div>
     </div>
