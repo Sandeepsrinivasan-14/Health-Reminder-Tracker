@@ -3,6 +3,7 @@
 function App() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [healthData, setHealthData] = useState({ bp_systolic: '', bp_diastolic: '', heart_rate: '', blood_sugar: '', weight: '' });
   const [riskResult, setRiskResult] = useState(null);
@@ -10,12 +11,14 @@ function App() {
   const [aiQuestion, setAiQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [healthRecords, setHealthRecords] = useState([]);
+  const [healthTips, setHealthTips] = useState([]);
+  const [showTips, setShowTips] = useState(false);
 
   const API_URL = 'https://health-reminder-tracker.onrender.com';
 
-  // Fetch users on load
+  // Load users on startup
   useEffect(() => {
-    fetchUsers();
+    loadUsers();
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
       setIsDarkMode(true);
@@ -23,41 +26,44 @@ function App() {
     }
   }, []);
 
-  // Fetch health records when user changes
+  // Load health records when user changes
   useEffect(() => {
     if (selectedUser) {
-      fetchHealthRecords();
+      loadHealthRecords();
     }
   }, [selectedUser]);
 
-  const fetchUsers = async () => {
+  const loadUsers = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/users`);
-      const data = await res.json();
-      console.log("Users fetched:", data);
+      const response = await fetch(`${API_URL}/users`);
+      const data = await response.json();
+      console.log("Users loaded:", data);
       setUsers(data);
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
+    } catch (error) {
+      console.error("Failed to load users:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchHealthRecords = async () => {
+  const loadHealthRecords = async () => {
     try {
-      const res = await fetch(`${API_URL}/health-data/user/${selectedUser.id}`);
-      const data = await res.json();
+      const response = await fetch(`${API_URL}/health-data/user/${selectedUser.id}`);
+      const data = await response.json();
       setHealthRecords(data);
       if (data && data.length > 0) {
         const latest = data[0];
         setHealthData({
-          bp_systolic: latest.bp_systolic,
-          bp_diastolic: latest.bp_diastolic,
-          heart_rate: latest.heart_rate,
-          blood_sugar: latest.blood_sugar,
-          weight: latest.weight
+          bp_systolic: latest.bp_systolic || '',
+          bp_diastolic: latest.bp_diastolic || '',
+          heart_rate: latest.heart_rate || '',
+          blood_sugar: latest.blood_sugar || '',
+          weight: latest.weight || ''
         });
       }
-    } catch (err) {
-      console.error("Failed to fetch health records:", err);
+    } catch (error) {
+      console.error("Failed to load health records:", error);
     }
   };
 
@@ -77,7 +83,7 @@ function App() {
       body: JSON.stringify(data)
     });
     alert('Health data saved!');
-    fetchHealthRecords();
+    loadHealthRecords();
   };
 
   const analyzeRisk = async () => {
@@ -91,12 +97,12 @@ function App() {
         weight: parseFloat(healthData.weight) || 70
       }
     };
-    const res = await fetch(`${API_URL}/api/ai/health-risk`, {
+    const response = await fetch(`${API_URL}/api/ai/health-risk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(riskBody)
     });
-    const data = await res.json();
+    const data = await response.json();
     setRiskResult(data);
   };
 
@@ -110,17 +116,30 @@ function App() {
     setIsLoading(true);
     
     try {
-      const res = await fetch(`${API_URL}/api/ai/chat`, {
+      const response = await fetch(`${API_URL}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: userMessage, health_data: null, session_id: selectedUser.id.toString() })
       });
-      const data = await res.json();
+      const data = await response.json();
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
     } catch (err) {
       setChatMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, please try again.' }]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadHealthTips = async () => {
+    if (!selectedUser) { alert('Select a user first'); return; }
+    try {
+      const response = await fetch(`${API_URL}/health-tips`);
+      const data = await response.json();
+      setHealthTips(data);
+      setShowTips(true);
+    } catch (error) {
+      setHealthTips(['Unable to load tips']);
+      setShowTips(true);
     }
   };
 
@@ -168,10 +187,10 @@ function App() {
         
         React.createElement('div', { style: { background: cardBg, borderRadius: '24px', padding: '25px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' } },
           React.createElement('h2', { style: { color: textColor, marginBottom: '20px' } }, '👤 Select Patient'),
-          React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '10px', maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' } },
-            users.length === 0 ? React.createElement('div', { style: { color: textColor, padding: '20px', textAlign: 'center' } }, 'Loading patients...') :
+          loading ? React.createElement('div', { style: { textAlign: 'center', padding: '20px', color: textColor } }, 'Loading patients...') :
+            React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '10px', maxHeight: '300px', overflowY: 'auto' } },
               users.map(user => React.createElement('button', { key: user.id, onClick: () => setSelectedUser(user), style: { padding: '8px 18px', background: selectedUser?.id === user.id ? 'linear-gradient(135deg, #667eea, #764ba2)' : isDarkMode ? '#334155' : '#f3f4f6', color: selectedUser?.id === user.id ? 'white' : textColor, border: 'none', borderRadius: '50px', cursor: 'pointer', fontSize: '13px', margin: '4px' } }, user.name))
-          ),
+            ),
           selectedUser && React.createElement('div', { style: { marginTop: '15px', padding: '12px', background: 'rgba(16,185,129,0.1)', borderRadius: '12px' } }, 
             React.createElement('span', { style: { color: '#059669', fontWeight: '600' } }, '✅ Selected: ', selectedUser.name)
           )
@@ -248,7 +267,13 @@ function App() {
             React.createElement('input', { type: 'text', placeholder: 'Type your health question...', value: aiQuestion, onChange: (e) => setAiQuestion(e.target.value), onKeyPress: (e) => e.key === 'Enter' && askAI(), style: { flex: 1, padding: '12px', border: `1px solid ${borderColor}`, borderRadius: '12px', background: inputBg, color: textColor } }),
             React.createElement('button', { onClick: askAI, disabled: isLoading, style: { padding: '12px 24px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' } }, 'Send')
           )
-        ] : React.createElement('div', { style: { textAlign: 'center', padding: '60px', color: '#9ca3af' } }, '👤 Please select a user first')
+        ] : React.createElement('div', { style: { textAlign: 'center', padding: '60px', color: '#9ca3af' } }, '👤 Please select a patient first')
+      ),
+
+      React.createElement('div', { style: { background: cardBg, borderRadius: '24px', padding: '25px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', marginTop: '25px' } },
+        React.createElement('h2', { style: { color: textColor, marginBottom: '20px' } }, '💡 Health Tips'),
+        React.createElement('button', { onClick: loadHealthTips, style: { padding: '12px 24px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' } }, '📋 Load Health Tips'),
+        showTips && healthTips.length > 0 && React.createElement('div', { style: { marginTop: '15px' } }, healthTips.map((tip, i) => React.createElement('div', { key: i, style: { padding: '12px', marginBottom: '8px', background: '#f3f4f6', borderRadius: '8px', color: '#333' } }, '✓ ', tip)))
       )
     )
   );
