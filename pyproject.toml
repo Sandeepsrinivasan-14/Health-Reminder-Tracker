@@ -1,0 +1,20 @@
+﻿[project]
+name = "health-tracker-api"
+version = "1.0.0"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "fastapi>=0.115.6",
+    "uvicorn>=0.34.0",
+    "python-dotenv>=1.0.1",
+    "twilio>=9.4.2",
+    "reportlab>=4.2.5",
+    "plyer>=2.1.0",
+    "pandas>=2.2.3",
+    "requests>=2.32.3"
+]
+
+[tool.vercel]
+build = "echo Build complete"
+
+[tool.vercel.scripts]
+build = "echo Build command executed"
