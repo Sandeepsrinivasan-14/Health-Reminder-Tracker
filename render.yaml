@@ -1,7 +1,7 @@
 services:
-  # Streamlit Dashboard
+  # Streamlit Dashboard (Frontend)
   - type: web
-    name: health-tracker-dashboard
+    name: health-tracker-frontend
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run dashboard.py --server.port $PORT --server.address 0.0.0.0 --server.enableCORS false --server.enableXsrfProtection false
@@ -9,7 +9,7 @@ services:
       - key: PYTHON_VERSION
         value: "3.11"
       - key: API_URL
-        value: https://health-tracker-backend.onrender.com
+        value: https://health-tracker-api.onrender.com
       - key: GROQ_API_KEY
         sync: false
       - key: EMAIL_ADDRESS
@@ -19,7 +19,7 @@ services:
 
   # FastAPI Backend
   - type: web
-    name: health-tracker-backend
+    name: health-tracker-api
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT
@@ -40,3 +40,4 @@ services:
         sync: false
       - key: EMAIL_PASSWORD
         sync: false
+
