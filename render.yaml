@@ -9,7 +9,10 @@ services:
       - key: PYTHON_VERSION
         value: "3.11"
       - key: API_URL
-        value: https://health-tracker-api.onrender.com
+        fromService:
+          name: health-tracker-api
+          type: web
+          property: host
       - key: GROQ_API_KEY
         sync: false
       - key: EMAIL_ADDRESS
