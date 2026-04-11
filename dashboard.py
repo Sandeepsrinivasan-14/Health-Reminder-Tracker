@@ -10,7 +10,8 @@ from fpdf import FPDF
 
 st.set_page_config(page_title="Medical Health Tracker", layout="wide")
 
-API_URL = "http://127.0.0.1:8000"
+import os
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000").rstrip("/")
 
 def create_pdf(df, name, meds):
     pdf = FPDF()
@@ -302,9 +303,27 @@ def fetch_data():
 # Initial fetch
 fetch_data()
 
+# Auto-provision a Test Patient if none exist
+if not st.session_state.users:
+    try:
+        requests.post(f"{API_URL}/users", json={"name": "Test Patient", "email": "test@example.com"}, timeout=5)
+        fetch_data()
+        if st.session_state.users:
+            st.session_state.selected_user = st.session_state.users[0]['id']
+            st.rerun()
+    except:
+        pass
+
 # Sidebar
 with st.sidebar:
     st.markdown("## 🏥 Patient Management")
+
+    if not st.session_state.users:
+        st.error("⚠️ No Patients Found")
+        st.warning("Please add a patient below or ensure the backend is running.")
+        if st.button("🔄 Retry Connection"):
+            fetch_data()
+            st.rerun()
     
     # Patient selection
     if st.session_state.users:
