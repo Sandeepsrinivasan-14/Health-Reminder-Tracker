@@ -40,4 +40,6 @@ services:
         sync: false
       - key: EMAIL_PASSWORD
         sync: false
+      - key: DATABASE_URL
+        sync: false
 

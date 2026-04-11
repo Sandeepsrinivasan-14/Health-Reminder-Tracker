@@ -1,10 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-import sqlite3
 from datetime import datetime
 import os
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
 from ai_service import get_health_advice, get_health_tips, get_medication_suggestions
 from twilio_service import send_sos_alert
 from notification_service import send_email_alert
@@ -20,49 +22,84 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database
-DB_PATH = "health_tracker.db"
+# Database Configuration
+# DATABASE_URL should be set in Render environment variables for Postgres
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./health_tracker.db")
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS health_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            bp_systolic INTEGER,
-            bp_diastolic INTEGER,
-            heart_rate INTEGER,
-            blood_sugar INTEGER,
-            weight REAL,
-            recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# Fix for Render (some Postgres URLs start with postgres:// instead of postgresql://)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Initialize DB on startup
-init_db()
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-# Models
-class User(BaseModel):
+# ========== DATABASE MODELS ==========
+
+class UserDB(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+
+class HealthDataDB(Base):
+    __tablename__ = "health_data"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    bp_systolic = Column(Integer)
+    bp_diastolic = Column(Integer)
+    heart_rate = Column(Integer)
+    blood_sugar = Column(Integer)
+    weight = Column(Float)
+    recorded_at = Column(DateTime, default=datetime.utcnow)
+
+# Create tables
+Base.metadata.create_all(bind=engine)
+
+# Dependency to get DB session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# ========== PYDANTIC MODELS ==========
+
+class UserCreate(BaseModel):
     name: str
     email: str
 
-class HealthData(BaseModel):
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    class Config:
+        from_attributes = True
+
+class HealthDataCreate(BaseModel):
     user_id: int
     bp_systolic: int
     bp_diastolic: int
     heart_rate: int
     blood_sugar: int
     weight: float
+
+class HealthDataResponse(BaseModel):
+    id: int
+    bp_systolic: int
+    bp_diastolic: int
+    heart_rate: int
+    blood_sugar: int
+    weight: float
+    recorded_at: datetime
+    class Config:
+        from_attributes = True
+
+class NotifyPayload(BaseModel):
+    user_id: int
+    message: str
+    delivery_type: str # "sms", "whatsapp", "email"
 
 # ========== ROUTES ==========
 
@@ -74,65 +111,31 @@ def root():
 def health():
     return {"status": "healthy"}
 
-@app.get("/users")
-def get_users():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, email FROM users")
-    users = [{"id": row[0], "name": row[1], "email": row[2]} for row in cursor.fetchall()]
-    conn.close()
-    return users
+@app.get("/users", response_model=List[UserResponse])
+def get_users(db: Session = Depends(get_db)):
+    return db.query(UserDB).all()
 
-@app.post("/users")
-def create_user(user: User):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    try:
-        cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)", (user.name, user.email))
-        conn.commit()
-        user_id = cursor.lastrowid
-        conn.close()
-        return {"id": user_id, "name": user.name, "email": user.email}
-    except Exception as e:
-        conn.close()
-        return {"error": str(e)}
+@app.post("/users", response_model=UserResponse)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(UserDB).filter(UserDB.email == user.email).first()
+    if db_user:
+        return db_user
+    new_user = UserDB(name=user.name, email=user.email)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
 
 @app.post("/health-data")
-def save_health_data(data: HealthData):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO health_data (user_id, bp_systolic, bp_diastolic, heart_rate, blood_sugar, weight)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (data.user_id, data.bp_systolic, data.bp_diastolic, data.heart_rate, data.blood_sugar, data.weight))
-    conn.commit()
-    conn.close()
+def save_health_data(data: HealthDataCreate, db: Session = Depends(get_db)):
+    new_data = HealthDataDB(**data.dict())
+    db.add(new_data)
+    db.commit()
     return {"message": "Health data saved"}
 
-@app.get("/health-data/user/{user_id}")
-def get_user_health_data(user_id: int):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT id, bp_systolic, bp_diastolic, heart_rate, blood_sugar, weight, recorded_at
-        FROM health_data WHERE user_id = ? ORDER BY recorded_at DESC
-    ''', (user_id,))
-    data = [{
-        "id": row[0],
-        "bp_systolic": row[1],
-        "bp_diastolic": row[2],
-        "heart_rate": row[3],
-        "blood_sugar": row[4],
-        "weight": row[5],
-        "recorded_at": row[6]
-    } for row in cursor.fetchall()]
-    conn.close()
-    return data
-
-class NotifyPayload(BaseModel):
-    user_id: int
-    message: str
-    delivery_type: str # "sms", "whatsapp", "email"
+@app.get("/health-data/user/{user_id}", response_model=List[HealthDataResponse])
+def get_user_health_data(user_id: int, db: Session = Depends(get_db)):
+    return db.query(HealthDataDB).filter(HealthDataDB.user_id == user_id).order_by(HealthDataDB.recorded_at.desc()).all()
 
 @app.post("/api/notify")
 def handle_notification(payload: NotifyPayload):
@@ -151,73 +154,53 @@ def send_sos(payload: dict):
     resp = send_sos_alert("🚨 EMERGENCY SOS ALERT! Patient needs immediate medical attention!")
     return {"message": "SOS alert triggered", "user_id": payload.get("user_id"), "twilio_response": resp}
 
-# Add sample users if none exist
-def add_sample_users():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM users")
-    count = cursor.fetchone()[0]
-    if count == 0:
-        sample_users = [
-            ("John Doe", "john@example.com"),
-            ("Jane Smith", "jane@example.com"),
-            ("Bob Johnson", "bob@example.com"),
-            ("Alice Williams", "alice@example.com"),
-            ("Charlie Brown", "charlie@example.com"),
-        ]
-        for name, email in sample_users:
-            cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)", (name, email))
-        conn.commit()
-        print(f"✅ Added {len(sample_users)} sample users")
-    conn.close()
-
-add_sample_users()
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
 @app.post("/api/ai/chat")
-async def ai_chat(request: dict):
+async def ai_chat(request: dict, db: Session = Depends(get_db)):
     question = request.get("question", "")
     user_id = request.get("user_id")
     
     patient_data = None
     if user_id:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("SELECT bp_systolic, bp_diastolic, heart_rate, blood_sugar, weight FROM health_data WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 5", (user_id,))
-        rows = cursor.fetchall()
+        rows = db.query(HealthDataDB).filter(HealthDataDB.user_id == user_id).order_by(HealthDataDB.recorded_at.desc()).limit(5).all()
         if rows:
-            patient_data = [{"bp_systolic": r[0], "bp_diastolic": r[1], "heart_rate": r[2], "blood_sugar": r[3], "weight": r[4]} for r in rows]
-        conn.close()
+            patient_data = [{"bp_systolic": r.bp_systolic, "bp_diastolic": r.bp_diastolic, "heart_rate": r.heart_rate, "blood_sugar": r.blood_sugar, "weight": r.weight} for r in rows]
     
     advice = get_health_advice(question, patient_data)
     return {"response": advice}
 
 @app.get("/api/ai/health-tips/{user_id}")
-async def health_tips(user_id: int):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT bp_systolic, bp_diastolic, heart_rate, blood_sugar, weight FROM health_data WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 5", (user_id,))
-    rows = cursor.fetchall()
-    patient_data = [{"bp_systolic": r[0], "bp_diastolic": r[1], "heart_rate": r[2], "blood_sugar": r[3], "weight": r[4]} for r in rows]
-    conn.close()
+async def health_tips(user_id: int, db: Session = Depends(get_db)):
+    rows = db.query(HealthDataDB).filter(HealthDataDB.user_id == user_id).order_by(HealthDataDB.recorded_at.desc()).limit(5).all()
+    patient_data = [{"bp_systolic": r.bp_systolic, "bp_diastolic": r.bp_diastolic, "heart_rate": r.heart_rate, "blood_sugar": r.blood_sugar, "weight": r.weight} for r in rows]
     
     tips = get_health_tips(patient_data)
     return {"tips": tips}
 
 @app.post("/api/ai/medication-suggestions")
-async def medication_suggestions(request: dict):
+async def medication_suggestions(request: dict, db: Session = Depends(get_db)):
     user_id = request.get("user_id")
     medications = request.get("medications", [])
     
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT bp_systolic, bp_diastolic, heart_rate, blood_sugar, weight FROM health_data WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 5", (user_id,))
-    rows = cursor.fetchall()
-    patient_data = [{"bp_systolic": r[0], "bp_diastolic": r[1], "heart_rate": r[2], "blood_sugar": r[3], "weight": r[4]} for r in rows]
-    conn.close()
+    rows = db.query(HealthDataDB).filter(HealthDataDB.user_id == user_id).order_by(HealthDataDB.recorded_at.desc()).limit(5).all()
+    patient_data = [{"bp_systolic": r.bp_systolic, "bp_diastolic": r.bp_diastolic, "heart_rate": r.heart_rate, "blood_sugar": r.blood_sugar, "weight": r.weight} for r in rows]
     
     suggestions = get_medication_suggestions(patient_data, medications)
     return {"suggestions": suggestions}
+
+# Auto-provision sample users if database is empty
+def add_sample_users():
+    db = SessionLocal()
+    try:
+        if db.query(UserDB).count() == 0:
+            sample_users = [
+                UserDB(name="John Doe", email="john@example.com"),
+                UserDB(name="Jane Smith", email="jane@example.com"),
+                UserDB(name="Bob Johnson", email="bob@example.com"),
+            ]
+            db.add_all(sample_users)
+            db.commit()
+            print(f"✅ Added {len(sample_users)} sample users")
+    finally:
+        db.close()
+
+add_sample_users()
