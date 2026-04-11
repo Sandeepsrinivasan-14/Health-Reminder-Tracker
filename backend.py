@@ -191,29 +191,39 @@ async def medication_suggestions(request: dict, db: Session = Depends(get_db)):
 def add_sample_users():
     db = SessionLocal()
     try:
+        sample_users_data = [
+            ("John Doe", "john@example.com"),
+            ("Jane Smith", "jane@example.com"),
+            ("Bob Johnson", "bob@example.com"),
+        ]
+        
         if db.query(UserDB).count() == 0:
-            sample_users = [
-                UserDB(name="John Doe", email="john@example.com"),
-                UserDB(name="Jane Smith", email="jane@example.com"),
-                UserDB(name="Bob Johnson", email="bob@example.com"),
-            ]
+            sample_users = [UserDB(name=n, email=e) for n, e in sample_users_data]
             db.add_all(sample_users)
             db.commit()
             print(f"✅ Added {len(sample_users)} sample users")
             
-        # Check if John Doe has health records; if not, add some
-        user = db.query(UserDB).filter(UserDB.name == "John Doe").first()
-        if user and db.query(HealthDataDB).filter(HealthDataDB.user_id == user.id).count() == 0:
-            sample_data = [
-                HealthDataDB(user_id=user.id, bp_systolic=120, bp_diastolic=80, heart_rate=72, blood_sugar=95, weight=70.0),
-                HealthDataDB(user_id=user.id, bp_systolic=125, bp_diastolic=82, heart_rate=75, blood_sugar=98, weight=70.2),
-                HealthDataDB(user_id=user.id, bp_systolic=118, bp_diastolic=78, heart_rate=70, blood_sugar=92, weight=69.8),
-                HealthDataDB(user_id=user.id, bp_systolic=122, bp_diastolic=80, heart_rate=73, blood_sugar=96, weight=70.1),
-                HealthDataDB(user_id=user.id, bp_systolic=128, bp_diastolic=84, heart_rate=78, blood_sugar=102, weight=70.5),
-            ]
-            db.add_all(sample_data)
-            db.commit()
-            print(f"✅ Added sample health records for {user.name}")
+        # Check and populate health records for all sample users
+        for name, _ in sample_users_data:
+            user = db.query(UserDB).filter(UserDB.name == name).first()
+            if user and db.query(HealthDataDB).filter(HealthDataDB.user_id == user.id).count() == 0:
+                # Add slight variations to data based on user id
+                base_sys = 120 + (user.id * 2)
+                base_dia = 80 + (user.id % 5)
+                base_hr = 72 + (user.id % 10)
+                base_sugar = 95 + (user.id * 3)
+                base_weight = 70.0 + user.id
+                
+                sample_data = [
+                    HealthDataDB(user_id=user.id, bp_systolic=base_sys, bp_diastolic=base_dia, heart_rate=base_hr, blood_sugar=base_sugar, weight=base_weight),
+                    HealthDataDB(user_id=user.id, bp_systolic=base_sys+5, bp_diastolic=base_dia+2, heart_rate=base_hr+3, blood_sugar=base_sugar+3, weight=base_weight+0.2),
+                    HealthDataDB(user_id=user.id, bp_systolic=base_sys-2, bp_diastolic=base_dia-2, heart_rate=base_hr-2, blood_sugar=base_sugar-3, weight=base_weight-0.2),
+                    HealthDataDB(user_id=user.id, bp_systolic=base_sys+2, bp_diastolic=base_dia, heart_rate=base_hr+1, blood_sugar=base_sugar+1, weight=base_weight+0.1),
+                    HealthDataDB(user_id=user.id, bp_systolic=base_sys+8, bp_diastolic=base_dia+4, heart_rate=base_hr+6, blood_sugar=base_sugar+7, weight=base_weight+0.5),
+                ]
+                db.add_all(sample_data)
+                db.commit()
+                print(f"✅ Added sample health records for {user.name}")
     finally:
         db.close()
 
