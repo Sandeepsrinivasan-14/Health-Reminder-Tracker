@@ -5,7 +5,7 @@ services:
     plan: free
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run dashboard.py --server.port $PORT --server.address 0.0.0.0 --server.enableCORS false --server.enableXsrfProtection false
+    startCommand: streamlit run dashboard.py --server.port $PORT --server.address 0.0.0.0 --server.enableCORS false --server.enableXsrfProtection false --server.enableWebsocketCompression false
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
@@ -26,7 +26,7 @@ services:
     name: health-tracker-api
     plan: free
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python seed_data.py
     startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
