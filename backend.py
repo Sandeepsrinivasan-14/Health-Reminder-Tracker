@@ -1,10 +1,13 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import sqlite3
 from datetime import datetime
 import os
+from ai_service import get_health_advice, get_health_tips, get_medication_suggestions
+from twilio_service import send_sos_alert
+from notification_service import send_email_alert
 
 app = FastAPI(title="Health Tracker API", version="1.0.0")
 
@@ -126,10 +129,27 @@ def get_user_health_data(user_id: int):
     conn.close()
     return data
 
+class NotifyPayload(BaseModel):
+    user_id: int
+    message: str
+    delivery_type: str # "sms", "whatsapp", "email"
+
+@app.post("/api/notify")
+def handle_notification(payload: NotifyPayload):
+    alerts = {}
+    if payload.delivery_type in ["sms", "whatsapp"]:
+        resp = send_sos_alert(payload.message, delivery_type=payload.delivery_type)
+        alerts["phone"] = resp
+    elif payload.delivery_type == "email":
+        caretaker_email = os.getenv("CARETAKER_EMAIL", os.getenv("EMAIL_ADDRESS", "test@example.com"))
+        resp = send_email_alert(caretaker_email, "Medical Reminder/Alert", payload.message)
+        alerts["email"] = resp
+    return {"status": "processed", "alerts": alerts}
+
 @app.post("/sos")
 def send_sos(payload: dict):
-    # Simplified SOS - just log for now
-    return {"message": "SOS alert triggered", "user_id": payload.get("user_id")}
+    resp = send_sos_alert("🚨 EMERGENCY SOS ALERT! Patient needs immediate medical attention!")
+    return {"message": "SOS alert triggered", "user_id": payload.get("user_id"), "twilio_response": resp}
 
 # Add sample users if none exist
 def add_sample_users():
@@ -156,3 +176,48 @@ add_sample_users()
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+@app.post("/api/ai/chat")
+async def ai_chat(request: dict):
+    question = request.get("question", "")
+    user_id = request.get("user_id")
+    
+    patient_data = None
+    if user_id:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT bp_systolic, bp_diastolic, heart_rate, blood_sugar, weight FROM health_data WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 5", (user_id,))
+        rows = cursor.fetchall()
+        if rows:
+            patient_data = [{"bp_systolic": r[0], "bp_diastolic": r[1], "heart_rate": r[2], "blood_sugar": r[3], "weight": r[4]} for r in rows]
+        conn.close()
+    
+    advice = get_health_advice(question, patient_data)
+    return {"response": advice}
+
+@app.get("/api/ai/health-tips/{user_id}")
+async def health_tips(user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT bp_systolic, bp_diastolic, heart_rate, blood_sugar, weight FROM health_data WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 5", (user_id,))
+    rows = cursor.fetchall()
+    patient_data = [{"bp_systolic": r[0], "bp_diastolic": r[1], "heart_rate": r[2], "blood_sugar": r[3], "weight": r[4]} for r in rows]
+    conn.close()
+    
+    tips = get_health_tips(patient_data)
+    return {"tips": tips}
+
+@app.post("/api/ai/medication-suggestions")
+async def medication_suggestions(request: dict):
+    user_id = request.get("user_id")
+    medications = request.get("medications", [])
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT bp_systolic, bp_diastolic, heart_rate, blood_sugar, weight FROM health_data WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 5", (user_id,))
+    rows = cursor.fetchall()
+    patient_data = [{"bp_systolic": r[0], "bp_diastolic": r[1], "heart_rate": r[2], "blood_sugar": r[3], "weight": r[4]} for r in rows]
+    conn.close()
+    
+    suggestions = get_medication_suggestions(patient_data, medications)
+    return {"suggestions": suggestions}

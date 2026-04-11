@@ -1,10 +1,10 @@
-﻿import os
+import os
 from twilio.rest import Client
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def send_sos_alert(message=None):
+def send_sos_alert(message=None, delivery_type="sms"):
     if message is None:
         message = "🚨 EMERGENCY SOS ALERT! Patient needs immediate medical attention!"
     
@@ -23,6 +23,10 @@ def send_sos_alert(message=None):
     
     if not to_number:
         return {"status": "failed", "error": "Caretaker number missing"}
+        
+    if delivery_type == "whatsapp":
+        from_number = f"whatsapp:{from_number}"
+        to_number = f"whatsapp:{to_number}"
     
     try:
         client = Client(account_sid, auth_token)
