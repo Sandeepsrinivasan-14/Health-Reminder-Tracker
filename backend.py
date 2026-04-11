@@ -200,6 +200,20 @@ def add_sample_users():
             db.add_all(sample_users)
             db.commit()
             print(f"✅ Added {len(sample_users)} sample users")
+            
+        # Check if John Doe has health records; if not, add some
+        user = db.query(UserDB).filter(UserDB.name == "John Doe").first()
+        if user and db.query(HealthDataDB).filter(HealthDataDB.user_id == user.id).count() == 0:
+            sample_data = [
+                HealthDataDB(user_id=user.id, bp_systolic=120, bp_diastolic=80, heart_rate=72, blood_sugar=95, weight=70.0),
+                HealthDataDB(user_id=user.id, bp_systolic=125, bp_diastolic=82, heart_rate=75, blood_sugar=98, weight=70.2),
+                HealthDataDB(user_id=user.id, bp_systolic=118, bp_diastolic=78, heart_rate=70, blood_sugar=92, weight=69.8),
+                HealthDataDB(user_id=user.id, bp_systolic=122, bp_diastolic=80, heart_rate=73, blood_sugar=96, weight=70.1),
+                HealthDataDB(user_id=user.id, bp_systolic=128, bp_diastolic=84, heart_rate=78, blood_sugar=102, weight=70.5),
+            ]
+            db.add_all(sample_data)
+            db.commit()
+            print(f"✅ Added sample health records for {user.name}")
     finally:
         db.close()
 
