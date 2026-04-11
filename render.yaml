@@ -2,6 +2,7 @@ services:
   # Streamlit Dashboard (Frontend)
   - type: web
     name: health-tracker-frontend
+    plan: free
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run dashboard.py --server.port $PORT --server.address 0.0.0.0 --server.enableCORS false --server.enableXsrfProtection false
@@ -23,6 +24,7 @@ services:
   # FastAPI Backend
   - type: web
     name: health-tracker-api
+    plan: free
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT
