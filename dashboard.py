@@ -275,16 +275,15 @@ try:
 except Exception:
     pass
 
-if 'chat_history' not in st.session_state:
+# Initial Session State Setup
+if 'initialized' not in st.session_state:
     st.session_state.chat_history = []
-if 'selected_user' not in st.session_state:
     st.session_state.selected_user = None
-if 'users' not in st.session_state:
     st.session_state.users = []
-if 'records' not in st.session_state:
     st.session_state.records = []
+    st.session_state.initialized = True
 
-# Fetch data
+# Fetch data safely
 def fetch_data():
     try:
         # Fetch users
@@ -292,27 +291,27 @@ def fetch_data():
         if u_resp.status_code == 200:
             st.session_state.users = u_resp.json()
         
+        # Auto-provision if empty
+        if not st.session_state.users:
+            requests.post(f"{API_URL}/users", json={"name": "John Doe", "email": "john@example.com"}, timeout=5)
+            u_resp = requests.get(f"{API_URL}/users", timeout=10)
+            if u_resp.status_code == 200:
+                st.session_state.users = u_resp.json()
+
+        # Set default user if none selected
+        if st.session_state.users and not st.session_state.selected_user:
+            st.session_state.selected_user = st.session_state.users[0]['id']
+
         # Fetch records for selected user
         if st.session_state.selected_user:
             r_resp = requests.get(f"{API_URL}/health-data/user/{st.session_state.selected_user}", timeout=10)
             if r_resp.status_code == 200:
                 st.session_state.records = r_resp.json()
-    except:
-        pass
+    except Exception as e:
+        print(f"Fetch Error: {e}")
 
-# Initial fetch
+# Call fetch once per run
 fetch_data()
-
-# Auto-provision a Test Patient if none exist
-if not st.session_state.users:
-    try:
-        requests.post(f"{API_URL}/users", json={"name": "Test Patient", "email": "test@example.com"}, timeout=5)
-        fetch_data()
-        if st.session_state.users:
-            st.session_state.selected_user = st.session_state.users[0]['id']
-            st.rerun()
-    except:
-        pass
 
 # Sidebar
 with st.sidebar:
