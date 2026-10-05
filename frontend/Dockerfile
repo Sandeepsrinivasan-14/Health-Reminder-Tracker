@@ -7,7 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
-COPY api_client.py streamlit_app.py ./
+COPY api_client.py streamlit_app.py theme.py ./
+COPY .streamlit ./.streamlit
 
 RUN useradd --create-home appuser
 USER appuser

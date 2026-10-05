@@ -16,6 +16,14 @@ dose is due, tracks stock, and lets the patient alert a caretaker by SMS, WhatsA
 |---|---|---|
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Medications](docs/screenshots/medications.png) | ![Assistant](docs/screenshots/assistant.png) |
 
+## Design
+
+The interface uses a "night lagoon" palette: deep-ocean background with slow aurora light, frosted-glass
+cards, mint for healthy readings and coral for the heart. The dashboard opens with a **3D glass heart
+(three.js) that beats at the patient's latest logged heart rate**, followed by one card per vital with a
+severity pill and a 14-reading sparkline. Fonts (Sora, Figtree; SIL OFL) are self-hosted so no third party
+sees patient visits, and the animation stops when the OS asks for reduced motion.
+
 ## Features
 
 - **Vitals tracking**: blood pressure, resting heart rate, blood glucose (fasting / random / post-meal) and weight, with validation that rejects physiologically impossible values.
@@ -51,6 +59,8 @@ backend/
   tests/               41 unit and API tests
 frontend/
   streamlit_app.py     UI
+  theme.py             glass theme, 3D heart hero, vital cards, chart styling
+  static/fonts/        self-hosted Sora and Figtree
   api_client.py        typed API client
   tests/               end-to-end tests (real UI against a real API server)
 docker-compose.yml     PostgreSQL + API + frontend
@@ -75,8 +85,10 @@ uvicorn app.main:app --reload                          # API on http://localhost
 In a second terminal:
 
 ```bash
-streamlit run frontend/streamlit_app.py                # UI on http://localhost:8501
+cd frontend && streamlit run streamlit_app.py          # UI on http://localhost:8501
 ```
+
+Run it from `frontend/` so Streamlit picks up the theme in `frontend/.streamlit/config.toml` and serves the bundled fonts.
 
 ### Option 2: Docker Compose (PostgreSQL)
 

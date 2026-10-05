@@ -13,11 +13,12 @@ import plotly.express as px
 import streamlit as st
 import streamlit.components.v1 as components
 
+import theme
 from api_client import APIError, HealthAPI
 
 st.set_page_config(page_title="Health Reminder Tracker", page_icon="🩺", layout="wide")
+theme.inject_css()
 
-SEVERITY_BADGE = {"normal": "🟢 Normal", "watch": "🟡 Watch", "high": "🟠 High", "urgent": "🔴 Urgent"}
 METRIC_LABELS = {"blood_pressure": "Blood pressure", "heart_rate": "Heart rate", "blood_glucose": "Blood glucose", "bmi": "BMI"}
 MED_CATEGORIES = ["BP", "Diabetes", "Cholesterol", "Heart", "Thyroid", "Pain", "Vitamin", "Antibiotic", "Other"]
 
@@ -60,14 +61,15 @@ def medication_alarm(pending: list[dict]) -> None:
   const dismissed = new Set(JSON.parse(P.localStorage.getItem(key) || '[]'));
   if (!D.getElementById('hrt-alarm')) {{
     const s = D.createElement('style');
-    s.textContent = `#hrt-alarm{{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999999;align-items:center;justify-content:center}}
-      #hrt-alarm .box{{background:#fff;color:#111;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;font-family:sans-serif}}
-      #hrt-alarm h2{{color:#b91c1c;margin:8px 0}} #hrt-alarm button{{border:0;border-radius:10px;padding:12px 20px;margin:8px;font-size:16px;cursor:pointer}}`;
+    s.textContent = `#hrt-alarm{{display:none;position:fixed;inset:0;background:rgba(4,14,26,.6);backdrop-filter:blur(10px);z-index:999999;align-items:center;justify-content:center}}
+      #hrt-alarm .box{{background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.2);color:#E6F1F5;border-radius:24px;padding:34px;max-width:420px;width:90%;text-align:center;font-family:Figtree,sans-serif;backdrop-filter:blur(24px);box-shadow:0 30px 80px -30px rgba(255,92,122,.7);animation:hrtIn .35s ease-out}}
+      @keyframes hrtIn{{from{{transform:scale(.92);opacity:0}}to{{transform:none;opacity:1}}}}
+      #hrt-alarm h2{{font-family:Sora,sans-serif;color:#FF5C7A;margin:8px 0}} #hrt-alarm button{{border:0;border-radius:999px;padding:12px 22px;margin:8px;font-size:16px;cursor:pointer;font-weight:600}}`;
     D.head.appendChild(s);
     const d = D.createElement('div'); d.id = 'hrt-alarm';
     d.innerHTML = '<div class="box"><div style="font-size:48px">💊</div><h2 id="hrt-title"></h2><p id="hrt-body"></p>' +
-      '<button id="hrt-ok" style="background:#15803d;color:#fff">Got it</button>' +
-      '<button id="hrt-snooze" style="background:#d97706;color:#fff">Snooze 5 min</button></div>';
+      '<button id="hrt-ok" style="background:linear-gradient(135deg,#2BB3A3,#1C7FA6);color:#fff">Got it</button>' +
+      '<button id="hrt-snooze" style="background:rgba(255,255,255,.12);color:#E6F1F5">Snooze 5 min</button></div>';
     D.body.appendChild(d);
   }}
   const modal = D.getElementById('hrt-alarm');
@@ -114,7 +116,7 @@ def ring_now(med: dict) -> None:
 # ---------------- Sidebar: patient selection ----------------
 
 with st.sidebar:
-    st.title("🩺 Health Reminder Tracker")
+    st.title("🩺 Health Reminder")
     users = call(api.list_users) or []
 
     if users:
@@ -170,8 +172,10 @@ with st.sidebar:
                 st.rerun()
 
 if not patient:
-    st.header("Welcome")
-    st.write("Add a patient from the sidebar to start tracking vitals and medications.")
+    theme.heart_hero("there", None, None, "Let's start tracking your health.")
+    st.markdown(
+        '<div class="glass">Add a patient from the sidebar to start logging vitals and medications.</div>', unsafe_allow_html=True
+    )
     st.stop()
 
 pid = patient["id"]
@@ -182,30 +186,50 @@ medication_alarm([m for m in medications if m["status_today"] == "pending"])
 # ---------------- Pages ----------------
 
 if page == "📊 Dashboard":
-    st.header(f"Dashboard: {patient['name']}")
     vitals = call(api.list_vitals, pid) or []
     assessment = call(api.assessment, pid) if vitals else None
+    latest = vitals[0] if vitals else None
+    headlines = {
+        None: "Let's start tracking your health.",
+        "normal": "Your latest numbers look steady.",
+        "watch": "A few numbers are worth watching.",
+        "high": "Some readings need a doctor's eye.",
+        "urgent": "A reading is in an urgent range.",
+    }
+    overall = assessment["overall"] if assessment else None
+    theme.heart_hero(patient["name"].split()[0], latest["heart_rate"] if latest else None, overall, headlines[overall])
+
+    if overall == "urgent":
+        st.error("At least one reading is in an urgent range. If you feel unwell, seek medical care now (112).")
 
     if assessment:
-        st.subheader(f"Latest status: {SEVERITY_BADGE[assessment['overall']]}")
-        if assessment["overall"] == "urgent":
-            st.error("At least one reading is in an urgent range. If you feel unwell, seek medical care now (112).")
+        df = pd.DataFrame(vitals).sort_values("recorded_at")
+        history = {
+            "blood_pressure": df["systolic"].tail(14).tolist(),
+            "heart_rate": df["heart_rate"].tail(14).tolist(),
+            "blood_glucose": df["blood_glucose"].tail(14).tolist(),
+            "bmi": df["weight_kg"].tail(14).tolist(),
+        }
+        units = {"blood_pressure": "mmHg", "heart_rate": "bpm", "blood_glucose": "mg/dL", "bmi": ""}
         cols = st.columns(len(assessment["findings"]))
         for col, f in zip(cols, assessment["findings"]):
-            with col:
-                value, _, context = f["value"].partition(" (")
-                st.metric(METRIC_LABELS.get(f["metric"], f["metric"]), value)
-                detail = "" if f["category"] == "Normal" else f" · {f['category']}"
-                context = context.rstrip(")")
-                if context and context not in f["category"]:
-                    detail += f" · {context}"
-                st.caption(f"{SEVERITY_BADGE[f['severity']]}{detail}")
+            value = f["value"].partition(" (")[0].replace(units[f["metric"]], "").strip()
+            col.markdown(
+                theme.vital_card(
+                    METRIC_LABELS.get(f["metric"], f["metric"]),
+                    value,
+                    units[f["metric"]],
+                    f["severity"],
+                    f["category"],
+                    history[f["metric"]],
+                ),
+                unsafe_allow_html=True,
+            )
+        st.write("")
         with st.expander("What do these results mean?"):
             for f in assessment["findings"]:
                 st.markdown(f"- **{METRIC_LABELS.get(f['metric'], f['metric'])}**: {f['advice']}")
             st.caption(assessment["disclaimer"])
-    else:
-        st.info("No readings yet. Log the first one below.")
 
     with st.expander("📝 Log a new reading", expanded=not vitals):
         with st.form("add_vital", clear_on_submit=False):
@@ -237,24 +261,31 @@ if page == "📊 Dashboard":
         df = pd.DataFrame(vitals)
         df["recorded_at"] = pd.to_datetime(df["recorded_at"])
         df = df.sort_values("recorded_at")
-        st.subheader("Trends")
-        t1, t2, t3 = st.tabs(["Blood pressure", "Glucose & heart rate", "Weight"])
-        with t1:
-            fig = px.line(
-                df, x="recorded_at", y=["systolic", "diastolic"], markers=True, labels={"value": "mmHg", "recorded_at": ""}
-            )
-            fig.add_hline(y=130, line_dash="dot", annotation_text="130 systolic")
-            fig.add_hline(y=80, line_dash="dot", annotation_text="80 diastolic")
-            st.plotly_chart(fig, use_container_width=True)
-        with t2:
-            st.plotly_chart(
-                px.line(df, x="recorded_at", y=["blood_glucose", "heart_rate"], markers=True, labels={"recorded_at": ""}),
-                use_container_width=True,
-            )
-        with t3:
-            st.plotly_chart(
-                px.line(df, x="recorded_at", y="weight_kg", markers=True, labels={"recorded_at": ""}), use_container_width=True
-            )
+        left, right = st.columns([1.7, 1])
+        with left:
+            st.subheader("Trends")
+            t1, t2, t3 = st.tabs(["Blood pressure", "Glucose & heart rate", "Weight"])
+            with t1:
+                fig = px.line(df, x="recorded_at", y=["systolic", "diastolic"], markers=True, labels={"value": "mmHg"})
+                fig.add_hrect(y0=0, y1=120, fillcolor=theme.MINT, opacity=0.06, line_width=0)
+                fig.add_hline(
+                    y=130, line_dash="dot", line_color=theme.MUTED, annotation_text="130", annotation_font_color=theme.MUTED
+                )
+                fig.add_hline(
+                    y=80, line_dash="dot", line_color=theme.MUTED, annotation_text="80", annotation_font_color=theme.MUTED
+                )
+                fig.update_yaxes(range=[min(60, df["diastolic"].min() - 10), df["systolic"].max() + 15])
+                st.plotly_chart(theme.style_figure(fig), use_container_width=True)
+            with t2:
+                fig = px.line(df, x="recorded_at", y=["blood_glucose", "heart_rate"], markers=True, labels={"value": ""})
+                st.plotly_chart(theme.style_figure(fig), use_container_width=True)
+            with t3:
+                fig = px.area(df, x="recorded_at", y="weight_kg", labels={"weight_kg": "kg"})
+                fig.update_yaxes(range=[df["weight_kg"].min() - 2, df["weight_kg"].max() + 2])
+                st.plotly_chart(theme.style_figure(fig), use_container_width=True)
+        with right:
+            st.subheader("Today's medications")
+            st.markdown(theme.med_rows(medications), unsafe_allow_html=True)
 
         st.subheader("History")
         table = df.sort_values("recorded_at", ascending=False)[
@@ -262,17 +293,9 @@ if page == "📊 Dashboard":
         ]
         st.dataframe(table, use_container_width=True, hide_index=True)
 
-    st.subheader("Today's medications")
-    if not medications:
-        st.caption("None scheduled.")
-    for m in medications:
-        icon = {"pending": "⏳", "taken": "✅", "skipped": "⏭️"}[m["status_today"]]
-        st.write(f"{icon} **{m['schedule_time']}**  {m['name']} {m['dosage']}" + ("  ·  ⚠️ low stock" if m["low_stock"] else ""))
-
 
 elif page == "💊 Medications":
-    st.header(f"Medications: {patient['name']}")
-    st.caption("Reminders ring in this browser tab while it is open. SMS/email reminders go to the caretaker on file.")
+    theme.page_title("Medications", "Reminders ring in this tab while it is open. SMS and email reminders go to the caretaker.")
 
     for m in medications:
         status = {"pending": "⏳ pending", "taken": "✅ taken", "skipped": "⏭️ skipped"}[m["status_today"]]
@@ -350,8 +373,7 @@ elif page == "💊 Medications":
 
 
 elif page == "🤖 Assistant":
-    st.header("Health assistant")
-    st.caption("Explains your readings in plain language. It does not diagnose or change your treatment; ask your doctor.")
+    theme.page_title("Health assistant", "Explains your readings in plain language. It does not diagnose or change treatment.")
     history = st.session_state.setdefault(f"chat_{pid}", [])
     for msg in history:
         with st.chat_message(msg["role"]):
@@ -378,8 +400,7 @@ elif page == "🤖 Assistant":
 
 
 elif page == "📄 Reports":
-    st.header(f"Reports: {patient['name']}")
-    st.write("Download a summary to share with your doctor.")
+    theme.page_title("Reports", "Download a summary to share with your doctor.")
     c1, c2 = st.columns(2)
     pdf = call(api.report_pdf, pid)
     if pdf:
@@ -402,7 +423,7 @@ elif page == "📄 Reports":
 
 
 elif page == "⚙️ Patient settings":
-    st.header("Patient settings")
+    theme.page_title("Patient settings", "Profile details and the caretaker who receives alerts.")
     with st.form("edit_patient"):
         name = st.text_input("Full name", patient["name"])
         height = st.number_input("Height (cm)", 0.0, 250.0, float(patient["height_cm"] or 0), step=1.0)

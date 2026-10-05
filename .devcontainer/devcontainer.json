@@ -6,7 +6,7 @@
     "vscode": { "extensions": ["ms-python.python", "ms-python.vscode-pylance", "charliermarsh.ruff"] }
   },
   "postCreateCommand": "pip install --user -r backend/requirements-dev.txt -r frontend/requirements.txt && cd backend && python -m app.seed",
-  "postAttachCommand": "(cd backend && uvicorn app.main:app --port 8000 &) && API_URL=http://127.0.0.1:8000 streamlit run frontend/streamlit_app.py --server.headless true",
+  "postAttachCommand": "(cd backend && uvicorn app.main:app --port 8000 &) && cd frontend && API_URL=http://127.0.0.1:8000 streamlit run streamlit_app.py --server.headless true",
   "forwardPorts": [8501, 8000],
   "portsAttributes": {
     "8501": { "label": "Frontend", "onAutoForward": "openPreview" },

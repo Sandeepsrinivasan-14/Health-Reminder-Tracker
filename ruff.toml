@@ -9,6 +9,7 @@ ignore = ["B008", "B905"]
 [lint.per-file-ignores]
 # Embedded JavaScript for the in-browser medication alarm.
 "frontend/streamlit_app.py" = ["E501"]
+"frontend/theme.py" = ["E501"]
 
 [lint.isort]
-known-first-party = ["app", "api_client"]
+known-first-party = ["app", "api_client", "theme"]

@@ -72,12 +72,12 @@ def test_empty_state_then_dashboard(env):
 
     at = AppTest.from_file(APP_FILE, default_timeout=30).run()
     assert not at.exception
-    assert any("Health Reminder Tracker" in t.value for t in at.sidebar.title)
+    assert any("Health Reminder" in t.value for t in at.sidebar.title)
 
     HealthAPI().create_user(name="Asha Verma", email="asha@example.com", height_cm=160)
     at = AppTest.from_file(APP_FILE, default_timeout=30).run()
     assert not at.exception
-    assert any("Dashboard" in h.value for h in at.header)
+    assert any("Log a new reading" in e.label for e in at.expander)
 
 
 @pytest.mark.parametrize("page", ["💊 Medications", "🤖 Assistant", "📄 Reports", "⚙️ Patient settings"])
