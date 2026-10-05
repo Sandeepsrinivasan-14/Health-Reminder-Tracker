@@ -1,26 +1,43 @@
-﻿version: '3.9'
+# Full stack: PostgreSQL + FastAPI + Streamlit.
+#   cp .env.example .env   # then set POSTGRES_PASSWORD and API_KEY at minimum
+#   docker compose up --build
+# Frontend: http://localhost:8501   API docs: http://localhost:8000/docs
+
 services:
   db:
-    image: postgres:16
-    container_name: healthreminder-db
+    image: postgres:16-alpine
     environment:
-      POSTGRES_DB: healthreminder
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: sandeepsrinivasan  # Your standard pw
-    ports:
-      - "55432:5432"
+      POSTGRES_DB: healthtracker
+      POSTGRES_USER: healthtracker
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U healthtracker -d healthtracker"]
+      interval: 5s
+      retries: 10
 
   api:
     build: ./backend
-    container_name: healthreminder-api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://healthtracker:${POSTGRES_PASSWORD}@db:5432/healthtracker
+      CORS_ORIGINS: http://localhost:8501
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
     environment:
-      DATABASE_URL: postgresql://postgres:sandeepsrinivasan@db:5432/healthreminder
+      API_URL: http://api:8000
+      API_KEY: ${API_KEY:-}
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
 
 volumes:
   postgres_data:

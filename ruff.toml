@@ -1,0 +1,14 @@
+line-length = 130
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+# B008: FastAPI's Depends()/Query() in defaults is the documented pattern.
+ignore = ["B008", "B905"]
+
+[lint.per-file-ignores]
+# Embedded JavaScript for the in-browser medication alarm.
+"frontend/streamlit_app.py" = ["E501"]
+
+[lint.isort]
+known-first-party = ["app", "api_client"]

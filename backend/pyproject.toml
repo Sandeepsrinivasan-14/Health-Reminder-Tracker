@@ -1,0 +1,8 @@
+[project]
+name = "health-reminder-tracker-api"
+version = "2.0.0"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning:starlette.*"]

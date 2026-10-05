@@ -1,305 +1,165 @@
-﻿# 🏥 Medical Health Reminder Tracker
+# Health Reminder Tracker
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
-[![React](https://img.shields.io/badge/React-18.2.0-61dafb.svg)](https://reactjs.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg)](https://fastapi.tiangolo.com/)
-[![Gemini AI](https://img.shields.io/badge/Gemini_AI-Integrated-4285F4.svg)](https://deepmind.google/technologies/gemini/)
+[![CI](https://github.com/Sandeepsrinivasan-14/Health-Reminder-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandeepsrinivasan-14/Health-Reminder-Tracker/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.45-FF4B4B)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## 📋 Overview
+A patient-facing app for people managing hypertension, diabetes or similar chronic conditions. Patients log
+their vitals and medications; the app flags readings against clinical reference ranges, rings an alarm when a
+dose is due, tracks stock, and lets the patient alert a caretaker by SMS, WhatsApp or email with one tap.
 
-**Medical Health Reminder Tracker** is a comprehensive AI-powered healthcare management system that helps patients track their health metrics, receive personalized health advice, set medication reminders, and trigger emergency alerts. The system integrates Google's Gemini AI for intelligent health assistance and Twilio for SMS emergency notifications.
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Sandeepsrinivasan-14/Health-Reminder-Tracker)
 
-### 🎯 Key Features
+| Dashboard | Medications | Assistant |
+|---|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Medications](docs/screenshots/medications.png) | ![Assistant](docs/screenshots/assistant.png) |
 
-| Category | Features |
-|----------|----------|
-| **Health Tracking** | BP, Heart Rate, Blood Sugar, Weight monitoring |
-| **AI Integration** | Gemini AI chat, Risk prediction, Personalized health tips |
-| **Emergency** | SOS SMS alerts via Twilio, WhatsApp ready |
-| **Reminders** | Medication reminders, Vaccination tracking |
-| **Reports** | PDF, JSON, CSV export, Email preview |
-| **User Management** | Multi-user support, 22+ test profiles |
-| **UI/UX** | Dark/Light theme, Responsive design, Glassmorphism |
+## Features
 
----
+- **Vitals tracking**: blood pressure, resting heart rate, blood glucose (fasting / random / post-meal) and weight, with validation that rejects physiologically impossible values.
+- **Threshold-based risk flags**: every reading is classified with published adult reference ranges (ACC/AHA 2017 blood-pressure categories, ADA glucose cut-offs, WHO BMI bands). The rules are deterministic and unit-tested, so the same reading always gets the same result.
+- **Medication reminders**: schedules, a per-day taken/skipped log, automatic stock counting, low-stock warnings and an in-browser alarm (sound, speech and a modal) when a dose is due.
+- **Caretaker alerts**: one-tap SOS and per-medication reminders over SMS or WhatsApp (Twilio) and email (SMTP). Every alert attempt is logged with its delivery status.
+- **Health assistant**: explains the patient's own readings in plain language. It uses an LLM (Groq, Llama 3.3) when a key is configured, grounded in the rule-based assessment, and falls back to the rule engine otherwise. It is instructed never to diagnose or change medication.
+- **Reports**: PDF summary for a doctor's visit and CSV export of all readings.
 
-## 🚀 Live Demo
+## Architecture
 
-- **Frontend:** https://health-tracker-frontend.vercel.app
-- **Backend API:** https://health-tracker-backend.onrender.com
-- **API Documentation:** https://health-tracker-backend.onrender.com/docs
+```mermaid
+flowchart LR
+    UI[Streamlit frontend] -- "REST + X-API-Key" --> API[FastAPI backend]
+    API --> DB[(PostgreSQL / SQLite)]
+    API --> RISK[Risk rules engine]
+    API -. optional .-> LLM[Groq LLM]
+    API -. optional .-> TW[Twilio SMS / WhatsApp]
+    API -. optional .-> SMTP[SMTP email]
+```
 
----
+```text
+backend/
+  app/
+    main.py            FastAPI app factory, CORS, /health
+    config.py          settings from environment variables
+    models.py          SQLAlchemy models (patients, vitals, medications, doses, alerts)
+    schemas.py         Pydantic validation
+    risk.py            clinical threshold rules
+    routers/           users, vitals, medications, alerts, assistant, reports
+    services/          LLM assistant, Twilio/SMTP notifier, PDF/CSV reports
+    seed.py            demo data
+  tests/               41 unit and API tests
+frontend/
+  streamlit_app.py     UI
+  api_client.py        typed API client
+  tests/               end-to-end tests (real UI against a real API server)
+docker-compose.yml     PostgreSQL + API + frontend
+render.yaml            one-click Render deployment
+```
 
-## 📸 Screenshots
+## Quick start
 
-### Dashboard Light Mode
-![Light Mode Dashboard](https://via.placeholder.com/800x400?text=Light+Mode+Dashboard)
-
-### Dark Mode Interface
-![Dark Mode Dashboard](https://via.placeholder.com/800x400?text=Dark+Mode+Interface)
-
-### AI Chat Assistant
-![AI Chat](https://via.placeholder.com/800x400?text=AI+Chat+Assistant)
-
----
-
-## 🛠️ Tech Stack
-
-### Backend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Python | 3.11 | Core language |
-| FastAPI | 0.104.1 | REST API framework |
-| SQLite3 | - | Database |
-| Uvicorn | 0.24.0 | ASGI server |
-| Google Gemini AI | - | AI health assistant |
-| Twilio | 8.10.4 | SMS notifications |
-| ReportLab | 4.0.4 | PDF generation |
-
-### Frontend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| React | 18.2.0 | UI framework |
-| Vite | 5.4.21 | Build tool |
-| Chart.js | 4.4.0 | Health analytics |
-| React Icons | 5.0.1 | Icon library |
-
----
-
-## 📁 Project Structure
-HealthReminderTracker/
-├── backend.py # FastAPI backend server
-├── ai_service.py # Gemini AI integration
-├── twilio_service.py # SMS notification service
-├── health_tracker.db # SQLite database
-├── requirements.txt # Python dependencies
-├── .env # Environment variables
-├── frontend/
-│ ├── src/
-│ │ ├── App.jsx # Main React component
-│ │ ├── components/ # Reusable components
-│ │ │ ├── SOSButton.jsx
-│ │ │ ├── HealthRecords.jsx
-│ │ │ └── NotificationBell.jsx
-│ │ └── services/
-│ │ └── NotificationService.js
-│ ├── public/
-│ └── package.json
-└── README.md
-
-
----
-
-## 🔧 Installation
-
-### Prerequisites
-
-- Python 3.11+
-- Node.js 18+
-- npm or yarn
-
-### Clone Repository
+### Option 1: local Python (SQLite, no external services)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/Medical-Health-Tracker.git
-cd Medical-Health-Tracker
-
-
-
-
-
-Backend Setup
-# Create virtual environment
-python -m venv venv
-
-# Activate (Windows)
-venv\Scripts\activate
-
-# Activate (Mac/Linux)
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Create .env file
-cp .env.example .env
-
-# Update .env with your credentials
-# - GEMINI_API_KEY
-# - TWILIO_ACCOUNT_SID
-# - TWILIO_AUTH_TOKEN
-# - TWILIO_PHONE_NUMBER
-
-# Run backend
-uvicorn backend:app --reload --host 0.0.0.0 --port 8000
-
-
-
-
-Frontend Setup
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-
-
-Access Application
-Frontend: http://localhost:5173
-
-Backend API: http://localhost:8000
-
-API Docs: http://localhost:8000/docs
-
-
-
-
-
-🌍 Deployment
-Backend (Render)
-Push code to GitHub
-
-Create account on Render
-
-Click "New +" → "Web Service"
-
-Connect your GitHub repository
-
-Configure:
-
-Build Command: pip install -r requirements.txt
-
-Start Command: uvicorn backend:app --host 0.0.0.0 --port $PORT
-
-Add environment variables
-
-Click "Deploy"
-
-Frontend (Vercel)
-bash
-cd frontend
-npm install -g vercel
-vercel --prod
-🔐 Environment Variables
-Create .env file with:
-
-env
-# Gemini AI
-GEMINI_API_KEY=your_gemini_api_key
-
-# Twilio SMS
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_PHONE_NUMBER=+15187194160
-
-# Caregiver Contact
-CARETAKER_PHONE=+91xxxxxxxxxx
-📊 API Endpoints
-MethodEndpointDescription
-GET/healthHealth check
-GET/usersGet all users
-POST/usersCreate user
-POST/health-dataSave health data
-GET/health-data/user/{id}Get user health data
-POST/api/ai/chatAI chat assistant
-POST/api/ai/health-riskHealth risk prediction
-POST/api/ai/health-tipsAI personalized tips
-POST/sosSend SOS alert
-GET/export-pdf/{id}Download PDF report
-GET/api/download-report/{id}Download JSON/CSV
-🧪 Testing
-bash
-# Run backend tests
-python test_notifications.py
-
-# Run complete test suite
-python complete_test_suite.py
-
-# Check API status
-curl http://localhost:8000/health
-📈 Features in Detail
-🤖 AI Health Assistant
-Conversational AI powered by Google Gemini
-
-Context-aware responses with conversation memory
-
-Personalized health advice based on user data
-
-🚨 Emergency SOS
-One-click emergency alert
-
-Instant SMS to caregiver via Twilio
-
-WhatsApp integration ready
-
-📊 Health Analytics
-Real-time health metrics tracking
-
-Historical data visualization
-
-Risk level prediction
-
-Personalized recommendations
-
-🔔 Notification System
-Medication reminders
-
-Vaccination alerts
-
-Low stock warnings
-
-Health metric alerts
-
-📄 Reports
-PDF health reports
-
-JSON data export
-
-CSV for Excel
-
-Email preview
-
-🤝 Contributing
-Contributions are welcome! Please follow these steps:
-
-Fork the repository
-
-Create feature branch (git checkout -b feature/AmazingFeature)
-
-Commit changes (git commit -m 'Add AmazingFeature')
-
-Push to branch (git push origin feature/AmazingFeature)
-
-Open Pull Request
-
-📄 License
-Distributed under the MIT License. See LICENSE for more information.
-
-👨‍💻 Author
-Your Name
-
-GitHub: https://github.com/Sandeepsrinivasan-14
-
-Email: sndpsrinivasan@gmail.com
-
-🙏 Acknowledgments
-Google Gemini AI for intelligent health assistance
-
-Twilio for SMS notifications
-
-FastAPI community
-
-React ecosystem
-
-⭐ Support
-If you found this project helpful, please give it a ⭐ on GitHub!
-
-📞 Contact
-For questions or support, please open an issue on GitHub.
-
-Built with ❤️ for better healthcare 🏥
+git clone https://github.com/Sandeepsrinivasan-14/Health-Reminder-Tracker.git
+cd Health-Reminder-Tracker
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r backend/requirements-dev.txt -r frontend/requirements.txt
+
+cd backend
+python -m app.seed                                     # optional demo patients
+uvicorn app.main:app --reload                          # API on http://localhost:8000/docs
+```
+
+In a second terminal:
+
+```bash
+streamlit run frontend/streamlit_app.py                # UI on http://localhost:8501
+```
+
+### Option 2: Docker Compose (PostgreSQL)
+
+```bash
+cp .env.example .env        # set POSTGRES_PASSWORD and API_KEY
+docker compose up --build
+```
+
+### Option 3: deploy to Render
+
+Click **Deploy to Render** above. The blueprint creates a free PostgreSQL database, the API (with a generated
+`API_KEY`) and the frontend. Add the optional Groq, Twilio and SMTP keys in the Render dashboard.
+
+## Configuration
+
+All settings are environment variables (see [.env.example](.env.example)). Only the core ones are required.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./health_tracker.db` | Any SQLAlchemy URL; `postgres://` URLs are normalised automatically |
+| `API_KEY` | empty (auth off) | Shared secret the frontend sends as `X-API-Key`; **set this in any deployment** |
+| `CORS_ORIGINS` | `http://localhost:8501` | Comma-separated allowed origins |
+| `TIMEZONE` | `Asia/Kolkata` | Decides which doses count as "today" |
+| `GROQ_API_KEY` | empty | Enables the LLM assistant |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | empty | Enables SMS / WhatsApp |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | empty | Enables email (Gmail needs an App Password) |
+
+`GET /health` reports which optional integrations are active. A missing integration never causes an error:
+the alert is logged as `not_configured`.
+
+## API
+
+Interactive docs are served at `/docs`. Main endpoints (all under `/api/v1`):
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` / `POST` | `/users` | List or create patients |
+| `GET` / `PATCH` / `DELETE` | `/users/{id}` | Read, update or delete a patient |
+| `GET` / `POST` | `/users/{id}/vitals` | Reading history (newest first) / log a reading |
+| `GET` | `/users/{id}/assessment` | Risk flags for the latest reading |
+| `POST` | `/assessment` | Assess a reading without saving it |
+| `GET` / `POST` | `/users/{id}/medications` | Medications with today's status and stock |
+| `GET` | `/users/{id}/medications/due` | Doses due now that haven't been logged |
+| `POST` | `/medications/{id}/doses` | Mark a dose `taken` (decrements stock) or `skipped` |
+| `DELETE` | `/doses/{id}` | Undo a dose (restores stock) |
+| `POST` | `/users/{id}/sos` | Alert the caretaker on the chosen channels |
+| `POST` | `/medications/{id}/remind` | Send a reminder to the caretaker |
+| `POST` | `/users/{id}/assistant/chat` | Ask the assistant about your readings |
+| `GET` | `/users/{id}/reports/pdf`, `/csv` | Download reports |
+
+## Risk rules
+
+| Metric | Normal | Watch | High | Urgent |
+|---|---|---|---|---|
+| Blood pressure (mmHg) | < 120 / < 80 | 120-139 / 80-89, or < 90 / < 60 | ≥ 140 / ≥ 90 | > 180 / > 120 |
+| Resting heart rate (bpm) | 60-100 | < 60 | > 100 | < 40 or > 130 |
+| Fasting glucose (mg/dL) | 70-99 | 100-125 | ≥ 126 or < 70 | < 54 |
+| Non-fasting glucose (mg/dL) | < 140 | 140-199 | ≥ 200 or < 70 | ≥ 300 or < 54 |
+| BMI (needs height) | 18.5-24.9 | < 18.5 or 25-29.9 | ≥ 30 | |
+
+The overall status is the most severe individual finding. The source of truth is [`backend/app/risk.py`](backend/app/risk.py)
+and its tests.
+
+## Testing
+
+```bash
+cd backend && python -m pytest -q          # 41 tests: rules, API, validation, auth, notifications, reports
+cd .. && python -m pytest -q frontend/tests # end-to-end: Streamlit app against a live API server
+ruff check . && ruff format --check .
+```
+
+CI runs lint and both test suites on Python 3.11 and 3.12, then builds and smoke-tests the Docker images.
+
+## Safety and limitations
+
+- This is a self-management aid, **not a medical device**, and does not provide diagnoses. Every assessment
+  carries a disclaimer and urgent findings point to emergency services (112 in India).
+- Authentication is a single shared API key between the frontend and the API. It keeps the API from being
+  open to the internet, but it is not per-patient login; add OAuth/OIDC before storing real patient data.
+- The browser alarm only rings while the app is open in a tab. Server-side scheduled reminders (e.g. a cron
+  job calling `/medications/due` and `/remind`) are the natural next step.
+- Database migrations use `create_all`; adopt Alembic before changing the schema of a live deployment.
+
+## License
+
+[MIT](LICENSE) © Sandeep Srinivasan · [GitHub](https://github.com/Sandeepsrinivasan-14)

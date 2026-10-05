@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r backend/requirements-dev.txt -r frontend/requirements.txt
+      - name: Lint
+        run: |
+          ruff check backend frontend
+          ruff format --check backend frontend
+      - name: Backend tests
+        working-directory: backend
+        run: python -m pytest -q
+      - name: Frontend end-to-end tests
+        run: python -m pytest -q frontend/tests
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t health-tracker-api ./backend
+      - name: Build frontend image
+        run: docker build -t health-tracker-frontend ./frontend
+      - name: Smoke-test API container
+        run: |
+          docker run -d --name api -p 8000:8000 -e DATABASE_URL=sqlite:////tmp/app.db health-tracker-api
+          for i in $(seq 1 30); do curl -fs http://localhost:8000/health && exit 0; sleep 1; done
+          docker logs api; exit 1
